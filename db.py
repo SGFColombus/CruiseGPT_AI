@@ -86,7 +86,7 @@ class DBTool:
                     "suiteRates.rates": {
                         "$elemMatch": {
                             "status": "A"
-                        },
+                        }, 
                         "$not":{
                             "$elemMatch": {
                                 "fare": "P2P",
@@ -97,12 +97,8 @@ class DBTool:
                 }
             }
         # price discount conditions
-        # check if the price is different from the original price
-        if preferences.get("price_discount", None)==True:
-            query["prices.suiteRates.rates.originalPrice"] = {"$ne": "$prices.suiteRates.rates.price"}
-        elif preferences.get("price_discount", None)==False:
-            query["prices.suiteRates.rates.originalPrice"] = {"$eq": "$prices.suiteRates.rates.price"}
-        print("Query:", query)
+        if preferences.get("price_discount") is True:
+            query["prices.suiteRates.rates.priceStatus"] = "D"
         
         # Fix sort syntax
         cruises = list(self.collection.find(query).sort("sailStartDate", 1).limit(5))
