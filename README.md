@@ -30,13 +30,13 @@ pip install uv
 ```
 2. Activate the virtual environment (on Windows)
 ```
-source .venv/Scripts/activate
-```
-2. Install dependencies
-```
 uv sync
 ```
-3. Run the server
+3. Install dependencies
+```
+source .venv/Scripts/activate
+```
+4. Run the server
 ```
 python src/scripts/agent_server.py
 ```
