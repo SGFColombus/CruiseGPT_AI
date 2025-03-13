@@ -30,15 +30,18 @@ pip install uv
 ```
 2. Activate the virtual environment (on Windows)
 ```
-uv sync
+python -m uv sync
 ```
 3. Install dependencies
 ```
-source .venv/Scripts/activate
+source .venv/Scripts/activate (for linux)
+```
+```
+.\.venv\Scripts\Activate.ps1 (for windows)
 ```
 4. Run the server
 ```
-python src/scripts/agent_server.py
+python agent_server.py
 ```
 
 - FastAPI server
