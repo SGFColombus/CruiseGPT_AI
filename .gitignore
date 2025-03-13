@@ -1,0 +1,13 @@
+node_modules
+dist
+.DS_Store
+server/public
+vite.config.ts.*
+*.tar.gz
+**/__pycache__/**
+test.ipynb
+uv.lock
+
+.idea
+.venv
+.env
