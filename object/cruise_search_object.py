@@ -16,6 +16,7 @@ class CruiseSearchInfo(BaseModel):
     minPrice: Optional[float] = None
     maxPrice: Optional[float] = None
     round_trip: Optional[bool] = None
+    price_discount: Optional[bool] = None
     ignore_destinations: Optional[List[str]] = None
     message: Optional[str] = None
 

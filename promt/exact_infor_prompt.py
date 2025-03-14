@@ -26,6 +26,7 @@ def extract_infor_promt(cruise_search_infor):
             "minPrice": number|null, //min price per person
             "maxPrice": number|null, //max price per person
             "round_trip": boolean //true if the user want to cruise round trip, false otherwise
+            "price_discount": boolean //true if the user want discount on the price of cruise, false otherwise
             "ignore_destinations": string[] //list of destinations to ignore
             "message": string //natural response message
         
@@ -41,6 +42,7 @@ def extract_infor_promt(cruise_search_infor):
         - If user ask about the return date or ending date, give the exactly minSailEndDate and maxSailEndDate. Example: I want to cruise ending before 2025-01-02, return maxSailEndDate: 2025-01-01
         - If user ask about the exactly date of ending, give the exactly minSailEndDate and maxSailEndDate on the same date. Example: I want to cruise ending on 2025-01-02, return minSailEndDate: 2025-01-02 and maxSailEndDate: 2025-01-02
         - If user ask about round trip, or want the starting and ending port are the same, give the round_trip: true
+        - If user ask about the discounted prices of cruises, give the price_discount: true
         - If user ask about the ignore destination, give the ignore_destinations
         - Notice with information related to compare: If less, before: return the previous date or previous number. If on and before: return the same date or number. If after: return the next date or next number. If between: return the range of date or number. If not between: return the date or number that is not in the range.
         - Use null for unspecified values, don't omit fields
