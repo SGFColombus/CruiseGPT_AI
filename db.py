@@ -13,7 +13,7 @@ class DBTool:
         self.db = self.client["silversea_cruises"]
         self.collection = self.db["cruises"]
         self.history_collection = self.db["chathistories"]
-    async def get_cruises(self, preferences, currency: str = "USD"):
+    async def get_cruises(self, preferences, currency: str = "USD", country: str = "US"):
         if preferences.get("minSailStartDate") is None:
             preferences["minSailStartDate"] = datetime.now().strftime("%Y-%m-%d")
             # preferences["minSailStartDate"] = datetime.now().isoformat()
@@ -83,6 +83,7 @@ class DBTool:
             query["prices"] = {
                 "$elemMatch": {
                     "currency": currency,
+                    "countries": country,
                     "suiteRates.rates": {
                         "$elemMatch": {
                             "status": "A"
@@ -105,21 +106,21 @@ class DBTool:
 
         enriched_cruises = []
         for cruise in cruises:
-            enriched_cruise = enrich_cruise(cruise, currency)
+            enriched_cruise = enrich_cruise(cruise, currency, country)
             enriched_cruises.append(enriched_cruise)
         return {
             "message": preferences.get("message", ""),
             "cruises": enriched_cruises
         }
-    async def get_cruise_infor(self, cruise_id, currency: str = "USD"):
+    async def get_cruise_infor(self, cruise_id, currency: str = "USD", country: str = "US"):
         cruise = self.collection.find_one({"_id": ObjectId(cruise_id)})
-        enriched_cruise = enrich_cruise(cruise, currency)
+        enriched_cruise = enrich_cruise(cruise, currency, country)
         return enriched_cruise
-    async def get_list_cabin(self, cruise_id, currency: str = "USD"):
+    async def get_list_cabin(self, cruise_id, currency: str = "USD", country: str = "US"):
         cruise = self.collection.find_one({"_id": ObjectId(cruise_id)})
         list_cabin = []
         for price in cruise.get("prices", []):
-            if price.get("currency", "") == currency and ("US" in price.get("countries", [])):
+            if price.get("currency", "") == currency and (country in price.get("countries", [])):
                 for suiteRate in price.get("suiteRates", []):
                     for rate in suiteRate.get("rates", []):
                         if rate.get("status", "") == "A" and rate.get("fare", "") == "P2P" and rate.get("price", None) is not None:
@@ -131,7 +132,7 @@ class DBTool:
                                 "price": rate.get("price", None)
                             })
         return list_cabin
-    def ingest_history(self, session_id, message, sender, cruise_list = []):
+    def ingest_history(self, session_id, message, sender, cruise_list = [], list_cabin = []):
         chat_history = self.history_collection.find_one({"sessionId": session_id})
         cruises = []
         for cruise in cruise_list:
@@ -140,7 +141,8 @@ class DBTool:
             "sender": sender,
             "text": message,
             "timestamp": datetime.now(),
-            "cruises": cruises
+            "cruises": cruises,
+            "cabins": list_cabin
         }
         if chat_history is None:
             return None

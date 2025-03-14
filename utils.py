@@ -1,4 +1,4 @@
-def enrich_cruise(cruise: dict, currency: str = "USD"):
+def enrich_cruise(cruise: dict, currency: str = "USD", country: str = "US"):
     itinerary = []
     for stop in cruise.get("itinerary", []):
         itinerary_dict = {}

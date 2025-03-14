@@ -1,5 +1,5 @@
 
-# CruiseGPT1 Frontend
+# CruiseGPT1 AI
 
 This is the core AI application for the CruiseGPT1 project. The project repository can be found at: https://github.com/SGFColombus/CruiseGPT_AI
 
