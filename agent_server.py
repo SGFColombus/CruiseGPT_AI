@@ -113,7 +113,7 @@ async def chat(request: ChatRequest):
                       "current_cruise": {"id": request.currentCruiseId},
                       "cruises": [],
                       "chat_history": chat_history,
-                      "currency": "USD",
+                      "currency": request.currency,
                       "country": request.country,
                       "description": request.description,
                       "action": ""},
@@ -125,7 +125,7 @@ async def chat(request: ChatRequest):
         response = await agent.ainvoke(**kwargs)
         db_tool.ingest_history(session_id, request.message, "user")
         list_cruise_id = [cruise.get("id") for cruise in response["cruises"]]
-        db_tool.ingest_history(session_id, response["messages"][-1].content, "ai", list_cruise_id)
+        db_tool.ingest_history(session_id, response["messages"][-1].content, "ai", list_cruise_id, response.get("list_cabin", []))
         
 
         output_dict = {
@@ -133,6 +133,9 @@ async def chat(request: ChatRequest):
             "cruises": response["cruises"],
             "currentCruiseId": response["current_cruise"].get("id", None),
             "sessionId": str(session_id),
+            "currency": request.currency,
+            "country": request.country,
+            "description": request.description,
         }
         if "action" in response.keys():
             output_dict["action"] = response["action"]

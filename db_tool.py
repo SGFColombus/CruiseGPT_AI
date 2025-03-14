@@ -7,7 +7,7 @@ from object.cruise_search_object import CruiseSearchInfo, AgentState
 db_tool = DBTool()
 
 @tool
-async def db_query_tool(cruise_search_info: CruiseSearchInfo = None, currency: str = "USD"):
+async def db_query_tool(cruise_search_info: CruiseSearchInfo = None, currency: str = "USD", country: str = "US"):
     """
     Execute a SQL query against the database and get back the result.
     If the query is not correct, an error message will be returned.
@@ -15,7 +15,7 @@ async def db_query_tool(cruise_search_info: CruiseSearchInfo = None, currency: s
     """
     preferences = dict(cruise_search_info)
     print(f"Successfully parsed preferences: {preferences}")
-    result = await db_tool.get_cruises(preferences, currency=currency)
+    result = await db_tool.get_cruises(preferences, currency=currency, country=country)
     if len(result["cruises"]) == 0:
         return {
             "messages": [HumanMessage(content="I'm sorry, I couldn't find any cruises that match your preferences. Please try again with different criteria.")],

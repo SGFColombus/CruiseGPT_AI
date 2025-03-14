@@ -1,5 +1,6 @@
 
 def get_supervior_prompt(members: list[str], current_cruise: dict) -> str:
+    print(f"Current cruise: {current_cruise}")
     return (
         "You are a supervisor tasked with managing a conversation between the"
         f" following workers: {members}. Given the following user request,"

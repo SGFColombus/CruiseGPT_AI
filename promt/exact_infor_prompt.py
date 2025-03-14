@@ -6,7 +6,7 @@ def supervisor_cruise_infor_prompt(description: str):
     Input:
     "description": {description}
     You have the following nodes:
-    - get_carbin_node: to get the carbin infor   
+    - get_carbin_node: to get the carbin infor or user ask about related to cabin
     - add_cart_node: to add the carbin to the cart if the description is not None. If the description is None, respond with the cruise_infor_node
     - cruise_infor_node: to get the general cruise infor except above nodes
     
