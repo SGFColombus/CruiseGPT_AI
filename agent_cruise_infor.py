@@ -16,6 +16,7 @@ from utils import wrap_model
 from object.cruise_search_object import CruiseSearchInfo
 import asyncio
 from langgraph.checkpoint.memory import MemorySaver
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -27,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 model=ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
-members = ["general_cruise_infor", "cabin_infor"]
+members = ["general_cruise_infor", "cabin_infor", "add_cart"]
 options = members + ["FINISH"]
 class Router(TypedDict):
     next: Literal[*options]
@@ -35,13 +36,24 @@ class Router(TypedDict):
 
 async def cruise_infor_supervisor_node(state: AgentState, config: dict) -> AgentState:
     logger.info(f"Cruise Infor Supervisor node called with state: {state}")
-    wrapped_model = wrap_model(model, supervisor_cruise_infor_prompt(), Router)
+    wrapped_model = wrap_model(model, supervisor_cruise_infor_prompt(state.get("description", None)), Router)
     response=await wrapped_model.ainvoke(state, config)
     logger.info(f"Cruise Infor Supervisor node response: {response}")
     goto = response["next"]   
     if goto == "FINISH":
         return Command(goto=END)
-    return Command(goto=goto, update={"next": goto})
+    elif goto == "add_cart":
+        return Command(goto=END, update={"messages": [HumanMessage(content="I've added the cabin to the cart", name="add_cart")],
+                                        "cruises": [],
+                                        "current_cruise": state.get("current_cruise", {}),
+                                        "chat_history": state.get("chat_history", ""),
+                                        "currency": state.get("currency", "USD"),
+                                        "cruise_search_info": state.get("cruise_search_info", CruiseSearchInfo()),
+                                        "action": "show_cabin",
+                                        "list_cabin": [],
+                                        "description": state.get("description", "")})
+    else:
+        return Command(goto=goto, update={"next": goto})
 
 async def general_cruise_infor_node(state: AgentState, config: dict) -> AgentState:
     logger.info(f"General Cruise Infor node called with state: {state}")
@@ -59,7 +71,8 @@ async def general_cruise_infor_node(state: AgentState, config: dict) -> AgentSta
             "currency": state.get("currency", "USD"),
             "cruise_search_info": state.get("cruise_search_info", CruiseSearchInfo()),
             "action": "",
-            "list_cabin": []}
+            "list_cabin": [],
+            "description": None}
 async def cabin_infor_node(state: AgentState, config: dict) -> AgentState:
     logger.info(f"Cabin Infor node called with state: {state}")
     list_cabin = await get_cabin_tool.ainvoke(state["current_cruise"]["id"], currency = state["currency"])
@@ -70,7 +83,8 @@ async def cabin_infor_node(state: AgentState, config: dict) -> AgentState:
             "currency": state.get("currency", "USD"),
             "cruise_search_info": state.get("cruise_search_info", CruiseSearchInfo()),
             "action": "show_cabin",
-            "list_cabin": list_cabin}   
+            "list_cabin": list_cabin,
+            "description": None}   
 agent=StateGraph(AgentState)
 agent.add_edge(START, "cruise_infor_supervisor")
 agent.add_node("cruise_infor_supervisor", cruise_infor_supervisor_node)
@@ -95,8 +109,16 @@ if __name__ == "__main__":
                           
     #             "config": config,
     #         }
+    # kwargs = {
+    #         "input": {"messages": [HumanMessage(content="Show me the list cabins of cruise")],
+    #                     "current_cruise": {"id": "6787671e9eced029e8747030"},
+    #                     "currency": "USD"
+    #                     },
+                        
+    #         "config": config,
+    #     }
     kwargs = {
-            "input": {"messages": [HumanMessage(content="Show me the list cabins of cruise")],
+            "input": {"messages": [HumanMessage(content="Add to the cart")],
                         "current_cruise": {"id": "6787671e9eced029e8747030"},
                         "currency": "USD"
                         },

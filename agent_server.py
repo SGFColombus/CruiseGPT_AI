@@ -37,6 +37,9 @@ class ChatRequest(BaseModel):
     message: str
     sessionId: Optional[str] = None
     currentCruiseId: Optional[str] = None
+    country: Optional[str] = "US"
+    currency: Optional[str] = "USD"
+    description: Optional[str] = None
 
 class ChatResponse(BaseModel):
     message: str
@@ -111,6 +114,8 @@ async def chat(request: ChatRequest):
                       "cruises": [],
                       "chat_history": chat_history,
                       "currency": "USD",
+                      "country": request.country,
+                      "description": request.description,
                       "action": ""},
             "config": RunnableConfig(
                 configurable=configurable,

@@ -1,11 +1,15 @@
 from datetime import datetime
 
-def supervisor_cruise_infor_prompt():
-    return '''
+def supervisor_cruise_infor_prompt(description: str):
+    return f'''
     You are an assistant to route the user's question to the correct node.
+    Input:
+    "description": {description}
     You have the following nodes:
-    - cruise_infor_node: to get the general cruise infor except the list of carbin
-    - get_carbin_node: to get the carbin infor    
+    - get_carbin_node: to get the carbin infor   
+    - add_cart_node: to add the carbin to the cart if the description is not None. If the description is None, respond with the cruise_infor_node
+    - cruise_infor_node: to get the general cruise infor except above nodes
+    
     '''
 def extract_infor_promt(cruise_search_infor):
     return f'''You are a cruise vacation assistant. Extract structed search criteria from user queries and user history

@@ -76,7 +76,8 @@ async def cruise_search_node(state: AgentState, config: dict) -> AgentState:
             "currency": state.get("currency", "USD"),
             "cruise_search_info": cruise_search_info,
             "action": "",
-            "list_cabin": []}
+            "list_cabin": [],
+            "description": None}
 
 async def cruise_infor_node(state: AgentState, config: dict) -> AgentState:
     logger.info(f"Cruise infor node called with state: {state}")
@@ -94,7 +95,8 @@ async def cruise_infor_node(state: AgentState, config: dict) -> AgentState:
             "currency": state.get("currency", "USD"),
             "cruise_search_info": state.get("cruise_search_info", CruiseSearchInfo()),
             "action": response.get("action", ""),
-            "list_cabin": response.get("list_cabin", [])}
+            "list_cabin": response.get("list_cabin", []),
+            "description": response.get("description", None)}
 
 # async def add_cart_node(state: AgentState, config: dict) -> AgentState:
 #     logger.info(f"Add cart node called with state: {state}")
@@ -126,7 +128,8 @@ async def general_infor_node(state: AgentState, config: dict) -> AgentState:
             "currency": state.get("currency", "USD"),
             "cruise_search_info": state.get("cruise_search_info", CruiseSearchInfo()),
             "action": "",
-            "list_cabin": []}   
+            "list_cabin": [],
+            "description": None}   
 
 async def clear_context(state: AgentState, config: dict) -> AgentState:
     logger.info(f"Clear context node called with state: {state}")
@@ -137,7 +140,8 @@ async def clear_context(state: AgentState, config: dict) -> AgentState:
             "currency": "USD",
             "cruise_search_info": CruiseSearchInfo(),
             "action": "",
-            "list_cabin": []}
+            "list_cabin": [],
+            "description": None}
 
 def create_agent(use_tool = True, use_memory = True):
     agent = StateGraph(AgentState)

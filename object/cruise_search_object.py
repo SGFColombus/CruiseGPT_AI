@@ -34,3 +34,4 @@ class AgentState(MessagesState, total=False):
     action: str|None = None
     cruise_search_info: CruiseSearchInfo|None = None
     list_cabin: list[dict] = []
+    description: str|None = None
