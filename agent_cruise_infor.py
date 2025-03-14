@@ -43,14 +43,16 @@ async def cruise_infor_supervisor_node(state: AgentState, config: dict) -> Agent
     if goto == "FINISH":
         return Command(goto=END)
     elif goto == "add_cart":
+        list_cabin = state.get("list_cabin", [])
+        list_cabin = [cabin for cabin in list_cabin if cabin.get("description") == state.get("description", {})]
         return Command(goto=END, update={"messages": [HumanMessage(content="I've added the cabin to the cart", name="add_cart")],
                                         "cruises": [],
                                         "current_cruise": state.get("current_cruise", {}),
                                         "chat_history": state.get("chat_history", ""),
                                         "currency": state.get("currency", "USD"),
                                         "cruise_search_info": state.get("cruise_search_info", CruiseSearchInfo()),
-                                        "action": "show_cabin",
-                                        "list_cabin": [],
+                                        "action": "add_cart",
+                                        "list_cabin": list_cabin,
                                         "description": state.get("description", "")})
     else:
         return Command(goto=goto, update={"next": goto})
