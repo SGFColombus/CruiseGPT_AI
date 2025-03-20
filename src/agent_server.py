@@ -141,7 +141,7 @@ async def chat(request: ChatRequest):
 
         output_dict = {
             "message": response["messages"][-1].content,
-            "cruises": response["list_cruises"],
+            "cruises": response.get("list_cruises", []),
             "currentCruiseId": response["current_cruise"].get("id", None),
             "sessionId": str(session_id),
             "currency": request.currency,
