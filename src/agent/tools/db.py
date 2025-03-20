@@ -1,3 +1,7 @@
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
 import os
 from pymongo import MongoClient
 import dotenv
@@ -6,6 +10,7 @@ import re
 from bson import ObjectId
 
 from agent.tools.utils.utils import enrich_cruise
+from pprint import pprint
 
 dotenv.load_dotenv()
 
@@ -164,6 +169,9 @@ class DBTool:
                                     "description": suiteRate.get("description", ""),
                                     "fare": rate.get("fare", ""),
                                     "price": rate.get("price", None),
+                                    "priceStatus": rate.get("priceStatus", ""),
+                                    "originalPrice": rate.get("originalPrice", None),
+                                    "cabinUrl": suiteRate.get("cabinUrl", ""),
                                 }
                             )
         return list_cabin
@@ -221,5 +229,13 @@ if __name__ == "__main__":
         # "price_discount": False
     }
 
-    print(asyncio.run(db_tool.get_cruises(preferences)))
+    pprint(
+        asyncio.run(
+            db_tool.get_list_cabin(
+                cruise_id="6787671e9eced029e874702d",
+                currency="AUD",
+                country="AS",
+            )
+        )
+    )
     # print(asyncio.run(db_tool.get_cruise_infor("DA250816C18")))
