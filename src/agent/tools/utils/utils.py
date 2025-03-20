@@ -10,8 +10,10 @@ def enrich_cruise(cruise: dict, currency: str = "USD", country: str = "US"):
     # get prices for each cruise
     prices = []
     for price in cruise.get("prices", []):
-        if price.get("currency", "") != currency and ("US" not in price.get("countries", [])):
-                continue
+        if price.get("currency", "") != currency and (
+            "US" not in price.get("countries", [])
+        ):
+            continue
         if "suiteRates" in price.keys():
             for suite_rate in price.get("suiteRates", []):
                 for rate in suite_rate.get("rates", []):
@@ -24,7 +26,15 @@ def enrich_cruise(cruise: dict, currency: str = "USD", country: str = "US"):
                     price_dict["fare"] = rate.get("fare", "")
                     prices.append(price_dict)
                 # get available prices and sort by price
-                available_prices = [price for price in prices if (price["fare"]=="P2P" and price["status"] == "A" and price["price"] is not None)]
+                available_prices = [
+                    price
+                    for price in prices
+                    if (
+                        price["fare"] == "P2P"
+                        and price["status"] == "A"
+                        and price["price"] is not None
+                    )
+                ]
                 available_prices.sort(key=lambda x: x["price"])
 
         elif "suites" in price.keys():
@@ -38,7 +48,11 @@ def enrich_cruise(cruise: dict, currency: str = "USD", country: str = "US"):
                     price_dict["status"] = suite_price.get("status", "")
                     prices.append(price_dict)
                 # get available prices and sort by price
-                available_prices = [price for price in prices if (price["status"] == "A" and price["price"] is not None)]
+                available_prices = [
+                    price
+                    for price in prices
+                    if (price["status"] == "A" and price["price"] is not None)
+                ]
                 available_prices.sort(key=lambda x: x["price"])
         else:
             available_prices = []
@@ -52,21 +66,33 @@ def enrich_cruise(cruise: dict, currency: str = "USD", country: str = "US"):
         "name": cruise.get("title", ""),
         "destination": cruise.get("destination", ""),
         # "itinerary": " → ".join([f"{stop.get('portName', '')} - {stop.get('description', '')}" for stop in cruise["itinerary"]]),
-        "itinerary": " → ".join([f"{stop.get('portName', '')}" for stop in cruise["itinerary"]]),
+        "itinerary": " → ".join(
+            [f"{stop.get('portName', '')}" for stop in cruise["itinerary"]]
+        ),
         "duration": cruise.get("duration", ""),
         "price": cheapest_suite["price"] if cheapest_suite else None,
         "originalPrice": cheapest_suite["originalPrice"] if cheapest_suite else None,
-        "suiteName": cheapest_suite["suiteName"] if cheapest_suite else 'Standard Suite',
-        "suiteDescription": cheapest_suite["suiteDescription"] if cheapest_suite else None,
-        "image": image_url[0] if isinstance(image_url, list) and len(image_url) > 0 else image_url,
+        "suiteName": (
+            cheapest_suite["suiteName"] if cheapest_suite else "Standard Suite"
+        ),
+        "suiteDescription": (
+            cheapest_suite["suiteDescription"] if cheapest_suite else None
+        ),
+        "image": (
+            image_url[0]
+            if isinstance(image_url, list) and len(image_url) > 0
+            else image_url
+        ),
         "departureDate": cruise.get("sailStartDate", ""),
         "returnDate": cruise.get("sailEndDate", ""),
         "shipName": cruise.get("shipName", ""),
         "embarkationPort": cruise.get("embarkationPortName", ""),
         "disembarkationPort": cruise.get("disembarkationPortName", ""),
-        "mapUrl": cruise.get("mapUrl", "")
-    } 
+        "mapUrl": cruise.get("mapUrl", ""),
+    }
     return enriched_cruise
+
+
 # import
 from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableLambda
@@ -75,7 +101,13 @@ from langchain_openai import ChatOpenAI
 from typing import Literal, TypedDict
 from langchain_core.language_models.chat_models import BaseChatModel
 
-def wrap_model(model: BaseChatModel, system_prompt: str="", structured_output: TypedDict=None, tools: list[BaseTool] = []) -> BaseChatModel:
+
+def wrap_model(
+    model: BaseChatModel,
+    system_prompt: str = "",
+    structured_output: TypedDict = None,
+    tools: list[BaseTool] = [],
+) -> BaseChatModel:
     preprocessor = RunnableLambda(
         lambda state: [SystemMessage(content=system_prompt)] + state["messages"],
         name="StateModifier",

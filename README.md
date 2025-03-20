@@ -65,13 +65,6 @@ The application will be available on port 5000.
 - utils.py - General utility functions
 - pyproject.toml - Python project configuration and dependencies
 
-## Contributing
-
-1. Create a new fork in the project
-2. Make your changes
-3. Test thoroughly
-4. Submit changes for review using the Projects tool
-5. Merge changes into the main branch when approved
 
 ## License
 
