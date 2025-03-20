@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 import openai
-from agent.agent import create_agent
+from agent.agent_main import agent_main
 
 # Configure logging
 logging.basicConfig(
@@ -100,7 +100,6 @@ from uuid import uuid4
 from agent.tools.db import DBTool
 
 db_tool = DBTool()
-agent = create_agent(use_tool=True)
 
 
 @app.post("/api/chat")
@@ -118,7 +117,7 @@ async def chat(request: ChatRequest):
                 "messages": [HumanMessage(content=request.message)],
                 "current_cruise": {"id": request.currentCruiseId},
                 "cruises": [],
-                "chat_history": chat_history,
+                # "chat_history": chat_history,
                 "currency": request.currency,
                 "country": request.country,
                 "description": request.description,
@@ -129,9 +128,9 @@ async def chat(request: ChatRequest):
                 run_id=run_id,
             ),
         }
-        response = await agent.ainvoke(**kwargs)
+        response = agent_main.invoke(**kwargs)
         db_tool.ingest_history(session_id, request.message, "user")
-        list_cruise_id = [cruise.get("id") for cruise in response["cruises"]]
+        list_cruise_id = [cruise.get("id") for cruise in response["list_cruises"]]
         db_tool.ingest_history(
             session_id,
             response["messages"][-1].content,
@@ -142,7 +141,7 @@ async def chat(request: ChatRequest):
 
         output_dict = {
             "message": response["messages"][-1].content,
-            "cruises": response["cruises"],
+            "cruises": response["list_cruises"],
             "currentCruiseId": response["current_cruise"].get("id", None),
             "sessionId": str(session_id),
             "currency": request.currency,
@@ -162,46 +161,11 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail="Failed to process chat request")
 
 
-from langchain_core.runnables import RunnableConfig
-
-agent_test = create_agent(use_tool=False, use_memory=False)
-
-
-@app.post("/api/cruise_search_test")
-async def cruise_search_test(request: ChatRequest):
-    """Chat endpoint that processes user messages and returns AI responses"""
-    try:
-        logger.info(f"Processing chat request: {request}")
-        session_id = request.sessionId
-        session_id = session_id.replace('"', "")
-        run_id = session_id
-        chat_history = db_tool.get_history(session_id)
-        configurable = {"thread_id": session_id}
-        kwargs = {
-            "input": {
-                "messages": [HumanMessage(content=request.message)],
-                "current_cruise": {"id": request.currentCruiseId},
-                "cruises": [],
-                "chat_history": chat_history,
-                "currency": "USD",
-            },
-            "config": RunnableConfig(
-                configurable=configurable,
-                run_id=run_id,
-            ),
-        }
-        response = await agent_test.ainvoke(**kwargs)
-        return dict(response.get("cruise_search_info", {}))
-
-    except Exception as e:
-        logger.error(f"Error in chat endpoint: {str(e)}")
-        raise e
-        raise HTTPException(status_code=500, detail="Failed to process chat request")
-
-
 if __name__ == "__main__":
     import uvicorn
 
     port = int(os.getenv("PORT", "5001"))
     logger.info(f"Starting FastAPI server on port {port}")
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
+    uvicorn.run(
+        "agent_server:app", host="0.0.0.0", port=port, log_level="info", reload=True
+    )

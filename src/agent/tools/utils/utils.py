@@ -109,7 +109,7 @@ def wrap_model(
     tools: list[BaseTool] = [],
 ) -> BaseChatModel:
     preprocessor = RunnableLambda(
-        lambda state: [SystemMessage(content=system_prompt)] + state["messages"],
+        lambda state: [SystemMessage(content=system_prompt)] + state.messages,
         name="StateModifier",
     )
     if tools:

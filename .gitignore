@@ -13,3 +13,4 @@ _*
 .idea
 .venv
 .env
+*/.langgraph_api

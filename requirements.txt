@@ -20,3 +20,4 @@ pandas
 numpy
 scikit-image
 faiss-cpu
+langgraph-cli[inmem]

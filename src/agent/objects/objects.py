@@ -1,5 +1,9 @@
 # from pydantic import BaseModel
 # from typing import List, Optional
+from typing import Annotated
+from langchain_core.messages import HumanMessage, AIMessage, AnyMessage
+from langgraph.graph.message import add_messages
+from typing_extensions import TypedDict
 
 # from datetime import date
 # from langchain_core.messages import BaseMessage
@@ -72,6 +76,7 @@ from typing import List, Optional
 from langchain_core.messages import BaseMessage
 from langgraph.graph import MessagesState
 
+
 class CruiseSearchInfo(BaseModel):
     embarkationPort: Optional[List[str]] = None
     disembarkationPort: Optional[List[str]] = None
@@ -87,21 +92,21 @@ class CruiseSearchInfo(BaseModel):
     round_trip: Optional[bool] = None
     price_discount: Optional[bool] = None
     ignore_destinations: Optional[List[str]] = None
-    message: Optional[str] = None
+    # message: Optional[str] = None
 
 
-class AgentState(MessagesState, total=False):
-    """`total=False` is PEP589 specs.
+class AgentState(BaseModel):
+    """The state of the agent."""
 
-    documentation: https://typing.readthedocs.io/en/latest/spec/typeddict.html#totality
-    """
-    messages: list[BaseMessage]
-    cruises: list[dict] = []
+    messages: Annotated[list[AnyMessage], add_messages]
     current_cruise: dict = {}
-    next: str
-    chat_history: str
+    chat_history: str | None = None
     currency: str = "USD"
-    action: str|None = None
-    cruise_search_info: CruiseSearchInfo|None = None
+    action: str | None = None
+    cruise_search_info: CruiseSearchInfo | None = None
+    list_cruises: list[dict] = []
     list_cabin: list[dict] = []
-    description: str|None = None
+    description: str | None = None
+
+    agent_routing: str | None = None
+    func_routing: str | None = None

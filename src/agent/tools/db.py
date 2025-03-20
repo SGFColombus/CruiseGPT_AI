@@ -17,9 +17,7 @@ class DBTool:
         self.collection = self.db["cruises"]
         self.history_collection = self.db["chathistories"]
 
-    async def get_cruises(
-        self, preferences, currency: str = "USD", country: str = "US"
-    ):
+    def get_cruises(self, preferences, currency: str = "USD", country: str = "US"):
         if preferences.get("minSailStartDate") is None:
             preferences["minSailStartDate"] = datetime.now().strftime("%Y-%m-%d")
             # preferences["minSailStartDate"] = datetime.now().isoformat()
@@ -137,18 +135,15 @@ class DBTool:
         for cruise in cruises:
             enriched_cruise = enrich_cruise(cruise, currency, country)
             enriched_cruises.append(enriched_cruise)
-        return {"message": preferences.get("message", ""), "cruises": enriched_cruises}
+        return enriched_cruises
 
-    async def get_cruise_infor(
-        self, cruise_id, currency: str = "USD", country: str = "US"
-    ):
+
+    def get_cruise_infor(self, cruise_id, currency: str = "USD", country: str = "US"):
         cruise = self.collection.find_one({"_id": ObjectId(cruise_id)})
         enriched_cruise = enrich_cruise(cruise, currency, country)
         return enriched_cruise
 
-    async def get_list_cabin(
-        self, cruise_id, currency: str = "USD", country: str = "US"
-    ):
+    def get_list_cabin(self, cruise_id, currency: str = "USD", country: str = "US"):
         cruise = self.collection.find_one({"_id": ObjectId(cruise_id)})
         list_cabin = []
         for price in cruise.get("prices", []):

@@ -1,159 +1,252 @@
-# # create a new agent to get the cruise infor
+import sys
+import os
 
-# from langchain_core.messages import HumanMessage
-# from langchain_core.tools import tool
-# from langchain_core.runnables import RunnableConfig
-# from agent.tools.db_tool import db_tool
-# from agent.objects.state import AgentState, CruiseSearchInfo
-# from langgraph.graph import StateGraph, START, END
-# from agent.promts.exact_infor_prompt import (
-#     supervisor_cruise_infor_prompt,
-#     context_infor_cruise,
-# )
-# from langchain_openai import ChatOpenAI
-# import logging
-# from typing import Literal, TypedDict
-# from langgraph.types import Command
-# from agent.tools.db_tool import cruise_infor_tool, get_cabin_tool
-# from agent.tools.utils.utils import wrap_model
-# import asyncio
-# from langgraph.checkpoint.memory import MemorySaver
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+from langchain_openai import ChatOpenAI
+from agent.tools.db import DBTool
+from typing import Annotated
+from langchain_core.tools import tool
+from agent.objects.objects import AgentState, CruiseSearchInfo
+from langgraph.prebuilt import InjectedState
+from agent.prompts.exact_infor_prompt import extract_infor_promt, context_infor_cruise
+from agent.objects.objects import AgentState, CruiseSearchInfo
+from langgraph.graph import StateGraph, START, END
+from langchain_openai import ChatOpenAI
+import logging
+from typing import Literal, TypedDict
+from agent.tools.utils.utils import wrap_model
+import asyncio
+from pydantic import BaseModel, Field
+from langgraph.checkpoint.memory import MemorySaver
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
+from langchain.prompts import ChatPromptTemplate
+from agent.tools.db import DBTool
+from typing import Annotated
+from langgraph.prebuilt import InjectedState
 
-# logging.basicConfig(
-#     level=logging.INFO,
-#     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-#     handlers=[logging.StreamHandler()],  # This will output to terminal
-# )
-# logger = logging.getLogger(__name__)
+from langgraph.types import Command
+from langgraph.graph import START, StateGraph
+from langchain_core.tools.base import InjectedToolCallId
+from langgraph.prebuilt import tools_condition, ToolNode
+from agent.prompts.cruise_agent_prompt import (
+    cruise_assistant_prompt,
+    cruise_router_prompt,
+    cruise_search_prompt,
+)
 
-# model = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-
-# members = ["general_cruise_infor", "cabin_infor", "add_cart"]
-# options = members + ["FINISH"]
-
-
-# class Router(TypedDict):
-#     next: Literal[*options]
-
-
-# async def cruise_infor_supervisor_node(state: AgentState, config: dict) -> AgentState:
-#     logger.info(f"Cruise Infor Supervisor node called with state: {state}")
-#     wrapped_model = wrap_model(
-#         model, supervisor_cruise_infor_prompt(state.get("description", None)), Router
-#     )
-#     response = await wrapped_model.ainvoke(state, config)
-#     logger.info(f"Cruise Infor Supervisor node response: {response}")
-#     goto = response["next"]
-#     if goto == "FINISH":
-#         return Command(goto=END)
-#     elif goto == "add_cart":
-#         return Command(
-#             goto=END,
-#             update={
-#                 "messages": [
-#                     HumanMessage(
-#                         content="I've added the cabin to the cart", name="add_cart"
-#                     )
-#                 ],
-#                 "cruises": [],
-#                 "current_cruise": state.get("current_cruise", {}),
-#                 "chat_history": state.get("chat_history", ""),
-#                 "currency": state.get("currency", "USD"),
-#                 "cruise_search_info": state.get(
-#                     "cruise_search_info", CruiseSearchInfo()
-#                 ),
-#                 "action": "show_cabin",
-#                 "list_cabin": [],
-#                 "description": state.get("description", ""),
-#             },
-#         )
-#     else:
-#         return Command(goto=goto, update={"next": goto})
+db_tool = DBTool()
+llm = ChatOpenAI(model="gpt-4o", temperature=0.5)
 
 
-# async def general_cruise_infor_node(state: AgentState, config: dict) -> AgentState:
-#     logger.info(f"General Cruise Infor node called with state: {state}")
-#     cruise_id = state["current_cruise"]["id"]
-#     cruise_info = await cruise_infor_tool.ainvoke(cruise_id, currency=state["currency"])
+@tool
+def provide_cruise_detail(
+    state: Annotated[AgentState, InjectedState],
+    tool_call_id: Annotated[str, InjectedToolCallId],
+):
+    """Get the cruise detail of the current cruise such as price, duration, stops, etc, but exclude cabin."""
+    cruise_id = state.current_cruise["id"]
+    currency = state.currency
+    cruise_detail = db_tool.get_cruise_infor(cruise_id, currency)
 
-#     wrapped_model = wrap_model(model, context_infor_cruise(cruise_info))
-#     response = await wrapped_model.ainvoke(state, config)
-#     logger.info(f"General Cruise Infor node response: {response}")
-
-#     return {
-#         "messages": [
-#             HumanMessage(content=response.content, name="general_cruise_infor")
-#         ],
-#         "cruises": [cruise_info],
-#         "current_cruise": state.get("current_cruise", {}),
-#         "chat_history": state.get("chat_history", ""),
-#         "currency": state.get("currency", "USD"),
-#         "cruise_search_info": state.get("cruise_search_info", CruiseSearchInfo()),
-#         "action": "",
-#         "list_cabin": [],
-#         "description": None,
-#     }
+    return Command(
+        update={
+            "messages": [ToolMessage(content=cruise_detail, tool_call_id=tool_call_id)],
+            "action": "",
+        }
+    )
 
 
-# async def cabin_infor_node(state: AgentState, config: dict) -> AgentState:
-#     logger.info(f"Cabin Infor node called with state: {state}")
-#     list_cabin = await get_cabin_tool.ainvoke(
-#         state["current_cruise"]["id"], currency=state["currency"]
-#     )
-#     return {
-#         "messages": [HumanMessage(content="Carbin infor", name="carbin_infor")],
-#         "cruises": [],
-#         "current_cruise": state.get("current_cruise", {}),
-#         "chat_history": state.get("chat_history", ""),
-#         "currency": state.get("currency", "USD"),
-#         "cruise_search_info": state.get("cruise_search_info", CruiseSearchInfo()),
-#         "action": "show_cabin",
-#         "list_cabin": list_cabin,
-#         "description": None,
-#     }
+@tool
+def add_cabin_to_cart(
+    state: Annotated[AgentState, InjectedState],
+    tool_call_id: Annotated[str, InjectedToolCallId],
+):
+    """Add a cabin to the cart."""
+
+    return Command(
+        update={
+            "messages": [
+                ToolMessage(
+                    content="Cabin added to cart successfully",
+                    tool_call_id=tool_call_id,
+                )
+            ],
+            "action": "add_cart",
+        }
+    )
 
 
-# agent = StateGraph(AgentState)
-# agent.add_node("cruise_agent_router", cruise_infor_supervisor_node)
-# agent.add_node(
-#     "query_cruise_details", query_cruise_details_node
-# )
-# agent.add_node("search_cruise_by_preferences", )
-# agent.add_node("cabin_infor", cabin_infor_node)
+@tool
+def cancel_cabin_from_cart(
+    state: Annotated[AgentState, InjectedState],
+    tool_call_id: Annotated[str, InjectedToolCallId],
+):
+    """Cancel a cabin from the cart."""
+
+    return Command(
+        update={
+            "messages": [
+                ToolMessage(
+                    content="Cabin successfully removed from cart",
+                    tool_call_id=tool_call_id,
+                )
+            ],
+            "action": "remove_cart",
+        }
+    )
 
 
-# agent.add_edge(START, "cruise_agent_router")
-# agent.add_edge("general_cruise_infor", END)
-# agent.add_edge("cabin_infor", END)
-# chatbot_cruise_infor = agent.compile(checkpointer=MemorySaver())
+@tool
+def get_list_cabin_in_cruise(
+    state: Annotated[AgentState, InjectedState],
+    tool_call_id: Annotated[str, InjectedToolCallId],
+):
+    """Get list of cabin in the current cruise."""
+    cruise_id = state.current_cruise["id"]
+    currency = state.currency
+    list_cabin = db_tool.get_list_cabin(cruise_id, currency)
 
-# if __name__ == "__main__":
-#     configurable = {"thread_id": 1}
-#     config = {"configurable": configurable}
-#     # kwargs = {
-#     #             "input": {"messages": [HumanMessage(content="Get the price of this cruise")],
-#     #                       "current_cruise": {"id": "6787671e9eced029e8747030"},
-#     #                       "currency": "USD"
-#     #                       },
+    return Command(
+        update={
+            "messages": [
+                ToolMessage(
+                    content=list_cabin,
+                    tool_call_id=tool_call_id,
+                )
+            ],
+            "action": "list_cabin",
+            "list_cabin": list_cabin,
+            "list_cruise": [],
+        }
+    )
 
-#     #             "config": config,
-#     #         }
-#     # kwargs = {
-#     #         "input": {"messages": [HumanMessage(content="Show me the list cabins of cruise")],
-#     #                     "current_cruise": {"id": "6787671e9eced029e8747030"},
-#     #                     "currency": "USD"
-#     #                     },
 
-#     #         "config": config,
-#     #     }
-#     kwargs = {
-#         "input": {
-#             "messages": [HumanMessage(content="Add to the cart")],
-#             "current_cruise": {"id": "6787671e9eced029e8747030"},
-#             "currency": "USD",
-#         },
-#         "config": config,
-#     }
+tools = [
+    provide_cruise_detail,
+    add_cabin_to_cart,
+    cancel_cabin_from_cart,
+    get_list_cabin_in_cruise,
+]
 
-#     response = asyncio.run(chatbot_cruise_infor.ainvoke(**kwargs))
-#     print(response)
+
+llm_with_tools = llm.bind_tools(tools, parallel_tool_calls=False)
+
+
+class NodeRoute(BaseModel):
+    step: Literal["cruise_search", "cruise_assistant"] = Field(
+        None, description=" The next step in the routing process"
+    )
+
+
+node_router = llm.with_structured_output(NodeRoute)
+
+
+def supervisor_node(state: AgentState, config: dict):
+    routing_node = node_router.invoke(
+        [
+            SystemMessage(content=cruise_router_prompt),
+            state.messages[-1],
+        ]
+    )
+    return {"func_routing": routing_node.step}
+
+
+def routing(state: AgentState, config: dict):
+    routing_node = state.func_routing
+    return routing_node
+
+
+def cruise_search_node(state: AgentState, config: dict) -> AgentState:
+    model_with_structured_output = llm.with_structured_output(CruiseSearchInfo)
+    wrapped_model = wrap_model(
+        model=model_with_structured_output,
+        system_prompt=extract_infor_promt(state.cruise_search_info),
+    )
+    user_preferences = wrapped_model.invoke(state, config)
+    list_cruises = db_tool.get_cruises(user_preferences.model_dump())
+    response = llm.invoke(
+        [
+            SystemMessage(content=cruise_search_prompt),
+            AIMessage(content=f"Result cruises found: {list_cruises}"),
+            HumanMessage(content=f"User preference: {user_preferences}"),
+        ]
+    )
+
+    return {
+        "messages": [response],
+        "list_cruises": list_cruises,
+    }
+
+
+def assistant(state: AgentState):
+    return {
+        "messages": [
+            llm_with_tools.invoke(
+                [SystemMessage(content=cruise_assistant_prompt)] + state.messages
+            )
+        ],
+    }
+
+
+def build_cruise_agent():
+    cruise_agent = StateGraph(AgentState)
+    cruise_agent.add_node("cruise_supervisor", supervisor_node)
+    cruise_agent.add_node("cruise_search", cruise_search_node)
+    cruise_agent.add_node("cruise_assistant", assistant)
+    cruise_agent.add_node("tools", ToolNode(tools))
+
+    cruise_agent.add_edge(START, "cruise_supervisor")
+    cruise_agent.add_conditional_edges(
+        "cruise_supervisor",
+        routing,
+        {
+            "cruise_search": "cruise_search",
+            "cruise_assistant": "cruise_assistant",
+        },
+    )
+    cruise_agent.add_conditional_edges(
+        "cruise_assistant",
+        tools_condition,
+    )
+    cruise_agent.add_edge("tools", "cruise_assistant")
+    cruise_agent.add_edge("cruise_search", END)
+    cruise_agent.add_edge("cruise_assistant", END)
+
+    cruise_agent = cruise_agent.compile(checkpointer=MemorySaver())
+    return cruise_agent
+
+
+def test(cruise_agent):
+    configurable = {"thread_id": 1}
+    config = {"configurable": configurable}
+
+    message_list = [
+        "Tell me about the cruise",
+        "What is this price?",
+        "Tell me about the cabin",
+        "Does this cruise visit Hanoi?",
+        "I want to book this cabin",
+        "I want to cancel a cabin",
+    ]
+
+    for message in message_list:
+        messages = [
+            HumanMessage(content=message),
+        ]
+        messages[-1].pretty_print()
+        messages = cruise_agent.invoke(
+            input={
+                "messages": messages,
+                "current_cruise": {"id": "6787671e9eced029e8747030"},
+            },
+            config=config,
+        )
+        # for m in messages["messages"]:
+        #     m.pretty_print()
+        messages["messages"][-1].pretty_print()
+
+
+if __name__ == "__main__":
+    # main()
+    cruise_agent = build_cruise_agent()
+    test(cruise_agent)
