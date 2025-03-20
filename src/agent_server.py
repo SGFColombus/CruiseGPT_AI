@@ -130,7 +130,7 @@ async def chat(request: ChatRequest):
         }
         response = agent_main.invoke(**kwargs)
         db_tool.ingest_history(session_id, request.message, "user")
-        list_cruise_id = [cruise.get("id") for cruise in response["list_cruises"]]
+        list_cruise_id = [cruise.get("id") for cruise in response.get("list_cruises", [])]
         db_tool.ingest_history(
             session_id,
             response["messages"][-1].content,

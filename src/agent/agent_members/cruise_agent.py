@@ -110,7 +110,7 @@ def get_list_cabin_in_cruise(
         update={
             "messages": [
                 ToolMessage(
-                    content=list_cabin,
+                    content=str(list_cabin),
                     tool_call_id=tool_call_id,
                 )
             ],
@@ -210,7 +210,7 @@ def build_cruise_agent():
     )
     cruise_agent.add_edge("tools", "cruise_assistant")
     cruise_agent.add_edge("cruise_search", END)
-    cruise_agent.add_edge("cruise_assistant", END)
+    # cruise_agent.add_edge("cruise_assistant", END)
 
     cruise_agent = cruise_agent.compile(checkpointer=MemorySaver())
     return cruise_agent
