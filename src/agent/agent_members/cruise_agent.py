@@ -115,8 +115,8 @@ def get_list_cabin_in_cruise(
                 )
             ],
             "action": "list_cabin",
-            "list_cabin": list_cabin,
-            "list_cruise": [],
+            "list_cabins": list_cabin,
+            "list_cruises": [],
         }
     )
 
@@ -175,6 +175,7 @@ def cruise_search_node(state: AgentState, config: dict) -> AgentState:
     return {
         "messages": [response],
         "list_cruises": list_cruises,
+        "list_cabins": [],
     }
 
 

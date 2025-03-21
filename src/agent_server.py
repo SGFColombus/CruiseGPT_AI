@@ -150,8 +150,8 @@ async def chat(request: ChatRequest):
         }
         if "action" in response.keys():
             output_dict["action"] = response["action"]
-        if "list_cabin" in response.keys():
-            output_dict["cabins"] = response["list_cabin"]
+        if "list_cabins" in response.keys():
+            output_dict["cabins"] = response["list_cabins"]
         logger.info(f"Output dictionary: {output_dict}")
         return output_dict
 
