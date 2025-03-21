@@ -66,7 +66,9 @@ def provide_cruise_detail(
 def add_cabin_to_cart(
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
-    """Add a cabin to the cart."""
+    """Add current cabin to the cart."""
+    list_cabins = state.list_cabins
+    list_cabins = [cabin for cabin in list_cabins if cabin["description"] == state.description]
 
     return Command(
         update={
@@ -77,6 +79,7 @@ def add_cabin_to_cart(
                 )
             ],
             "action": "add_cart",
+            "list_cabins": list_cabins,
         }
     )
 
