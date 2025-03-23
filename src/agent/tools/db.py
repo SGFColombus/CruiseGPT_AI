@@ -148,6 +148,7 @@ class DBTool:
         enriched_cruise = enrich_cruise(cruise, currency, country)
         return enriched_cruise
 
+    
     def get_list_cabin(self, cruise_id, currency: str = "USD", country: str = "US"):
         cruise = self.collection.find_one({"_id": ObjectId(cruise_id)})
         list_cabin = []
