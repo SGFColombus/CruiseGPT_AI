@@ -40,12 +40,18 @@ llm = ChatOpenAI(model="gpt-4o", temperature=0.5)
 
 @tool
 def provide_cruise_detail(
-    state: Annotated[AgentState, InjectedState],
+    cruise_id: str,
+    currency: str,
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
-    """Get the cruise detail of the current cruise such as price, duration, stops, etc, but exclude cabin."""
-    cruise_id = state.current_cruise["id"]
-    currency = state.currency
+    """Get the cruise detail of the current cruise such as price, duration, stops, etc, but exclude cabin.
+    Args:
+        cruise_id: The id of the cruise
+        currency: The currency of the cruise
+        tool_call_id: The id of the tool call
+    Returns:
+        The cruise detail
+    """
     cruise_detail = db_tool.get_cruise_infor(cruise_id, currency)
 
     return Command(
@@ -58,7 +64,6 @@ def provide_cruise_detail(
 
 @tool
 def add_cabin_to_cart(
-    state: Annotated[AgentState, InjectedState],
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
     """Add a cabin to the cart."""
@@ -78,7 +83,6 @@ def add_cabin_to_cart(
 
 @tool
 def cancel_cabin_from_cart(
-    state: Annotated[AgentState, InjectedState],
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
     """Cancel a cabin from the cart."""
@@ -98,12 +102,18 @@ def cancel_cabin_from_cart(
 
 @tool
 def get_list_cabin_in_cruise(
-    state: Annotated[AgentState, InjectedState],
+    cruise_id: str,
+    currency: str,
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
-    """Get list of cabin in the current cruise."""
-    cruise_id = state.current_cruise["id"]
-    currency = state.currency
+    """Get list of cabin in the current cruise.
+    Args:
+        cruise_id: The id of the cruise
+        currency: The currency of the cruise
+        tool_call_id: The id of the tool call
+    Returns:
+        The list of cabin in the current cruise
+    """
     list_cabin = db_tool.get_list_cabin(cruise_id, currency)
 
     return Command(
@@ -164,9 +174,16 @@ def cruise_search_node(state: AgentState, config: dict) -> AgentState:
     )
     user_preferences = wrapped_model.invoke(state, config)
     list_cruises = db_tool.get_cruises(user_preferences.model_dump())
+    total_number_of_cruises = len(list_cruises)
+    list_cruises = list_cruises[:5] ## Only take 5
     response = llm.invoke(
         [
-            SystemMessage(content=cruise_search_prompt),
+            SystemMessage(
+                content=cruise_search_prompt.format(
+                    list_cruises=list_cruises,
+                    total_number_of_cruises=total_number_of_cruises,
+                ),
+            ),
             AIMessage(content=f"Result cruises found: {list_cruises}"),
             HumanMessage(content=f"User preference: {user_preferences}"),
         ]
@@ -180,10 +197,17 @@ def cruise_search_node(state: AgentState, config: dict) -> AgentState:
 
 
 def assistant(state: AgentState):
+    current_cruise_id = state.current_cruise["id"]
+    cruise_assistant_prompt_with_current_cruise_id = cruise_assistant_prompt.format(
+        current_cruise_id=current_cruise_id,
+        list_cabins=state.list_cabins,
+        current_cabin=state.current_cabin,
+    )
     return {
         "messages": [
             llm_with_tools.invoke(
-                [SystemMessage(content=cruise_assistant_prompt)] + state.messages
+                [SystemMessage(content=cruise_assistant_prompt_with_current_cruise_id)]
+                + state.messages
             )
         ],
     }

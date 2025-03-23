@@ -99,14 +99,14 @@ class AgentState(BaseModel):
     """The state of the agent."""
 
     messages: Annotated[list[AnyMessage], add_messages]
-    current_cruise: dict = {}
     chat_history: str | None = None
     currency: str = "USD"
     action: str | None = None
     cruise_search_info: CruiseSearchInfo | None = None
     list_cruises: list[dict] = []
     list_cabins: list[dict] = []
-    description: str | None = None
+    current_cruise: dict = {}
+    current_cabin: str | None = None
 
     agent_routing: str | None = None
     func_routing: str | None = None

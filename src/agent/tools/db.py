@@ -134,7 +134,7 @@ class DBTool:
             query["prices.suiteRates.rates.priceStatus"] = "D"
 
         # Fix sort syntax
-        cruises = list(self.collection.find(query).sort("sailStartDate", 1).limit(5))
+        cruises = list(self.collection.find(query).sort("sailStartDate", 1))
 
         enriched_cruises = []
         for cruise in cruises:
