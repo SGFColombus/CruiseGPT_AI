@@ -5,9 +5,12 @@ server/public
 vite.config.ts.*
 *.tar.gz
 **/__pycache__/**
+**/__pycache__
 test.ipynb
 uv.lock
+_*
 
 .idea
 .venv
 .env
+*/.langgraph_api
