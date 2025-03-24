@@ -119,10 +119,12 @@ class DBTool:
                     "currency": currency,
                     "countries": country,
                     "suiteRates.rates": {
-                        "$elemMatch": {"status": "A"},
+                        "$elemMatch": {
+                            "status": "A",
+                            "fare": "P2P",
+                        },
                         "$not": {
                             "$elemMatch": {
-                                "fare": "P2P",
                                 "$or": price_negative_conditions,
                             }
                         },
@@ -141,7 +143,6 @@ class DBTool:
             enriched_cruise = enrich_cruise(cruise, currency, country)
             enriched_cruises.append(enriched_cruise)
         return enriched_cruises
-
 
     def get_cruise_infor(self, cruise_id, currency: str = "USD", country: str = "US"):
         cruise = self.collection.find_one({"_id": ObjectId(cruise_id)})

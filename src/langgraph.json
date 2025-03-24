@@ -1,7 +1,8 @@
 {
   "dependencies": ["."],
   "graphs": {
-    "agent_main": "./agent/agent_main.py:agent_main"
+    "agent_main": "./agent/agent_main.py:agent_main",
+    "cruise_agent": "./agent/agent_members/cruise_agent.py:cruise_agent"
   },
   "env": "../.env"
 }

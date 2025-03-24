@@ -42,9 +42,13 @@ router = llm.with_structured_output(Route)
 def supervisor_node(state: AgentState, config: dict):
     logger.info(f"Supervisor node called with state: {state}")
     prompt = (
-        "You are a supervisor to routing task for specilized agent in cruise assitance system. Please choose the agent you want to route to following the instruction:"
-        "1. Cruise agent: Process task relevant to cruises: searching/querying cruises: date, prices, destinations, etc, and booking/cancel cabin. This is used when user mentions cruises, cabin, city, trips"
-        "2. General agent: General information, not related to any of the agent above"
+        "You are a supervisor to routing task for specilized agent in cruise assitance system. Please choose the agent you want to route to following the instruction:\n"
+        "1. Cruise agent: Process task relevant to cruises: searching/querying cruises: date, prices, destinations, etc, and booking/cancel cabin. This is used when user mentions cruises, cabin, city, trips \n"
+        "2. General agent: General information, not related to any of the agent above\n"
+        "\nNotice:"
+        "- Cabin is a room in cruise."
+        "- If the user ask about one destination about cityname, it usually means the user want to search cruise about this city, respond with the cruise_search worker."
+        "- If the user mention paying/ booking, it usually means the user want to pay/book for their current cabin cruise."
     )
     routing_agent = router.invoke([SystemMessage(content=prompt), state.messages[-1]])
     return {"agent_routing": routing_agent.step}

@@ -105,7 +105,7 @@ class AgentState(BaseModel):
     cruise_search_info: CruiseSearchInfo | None = None
     list_cruises: list[dict] = []
     list_cabins: list[dict] = []
-    current_cruise: dict = {}
+    current_cruise_id: str | None = None
     current_cabin: str | None = None
 
     agent_routing: str | None = None

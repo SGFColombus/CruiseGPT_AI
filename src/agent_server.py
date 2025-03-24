@@ -13,6 +13,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 import openai
+
+# import HumanMessage and RunnableConfig
+from langchain_core.messages import HumanMessage
+from langgraph.types import Command
+from langchain_core.runnables import RunnableConfig
+from agent.tools.db import DBTool
+
+
 from agent.agent_main import agent_main
 
 # Configure logging
@@ -20,6 +28,7 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
 
 # Validate OpenAI API key
 api_key = os.getenv("OPENAI_API_KEY")
@@ -72,6 +81,21 @@ app.add_middleware(
 )
 
 
+def chat_response(user_input: dict, config: dict, agent):
+    snapshot = agent.get_state(config)
+    if snapshot.next:
+        value_from_human = user_input["messages"][-1].content
+        messages = agent.invoke(Command(resume=value_from_human), config=config)
+    else:
+        messages = agent.invoke(input=user_input, config=config)
+
+    snapshot = agent.get_state(config)
+    if snapshot.next:
+        ai_message = snapshot.tasks[0].interrupts[0].value
+        return ai_message, snapshot.values
+    return messages["messages"][-1].content, snapshot.values
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint to verify server status"""
@@ -88,20 +112,6 @@ async def health_check():
         )
 
 
-# import HumanMessage and RunnableConfig
-from langchain_core.messages import (
-    AIMessage,
-    BaseMessage,
-    HumanMessage,
-    ToolMessage,
-)
-from langchain_core.runnables import RunnableConfig
-from uuid import uuid4
-from agent.tools.db import DBTool
-
-db_tool = DBTool()
-
-
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
     """Chat endpoint that processes user messages and returns AI responses"""
@@ -110,17 +120,16 @@ async def chat(request: ChatRequest):
         session_id = request.sessionId
         session_id = session_id.replace('"', "")
         run_id = session_id
-        chat_history = db_tool.get_history(session_id)
         configurable = {"thread_id": session_id}
         kwargs = {
-            "input": {
+            "user_input": {
                 "messages": [HumanMessage(content=request.message)],
-                "current_cruise": {"id": request.currentCruiseId},
                 "cruises": [],
                 # "chat_history": chat_history,
                 "currency": request.currency,
                 "country": request.country,
-                "description": request.description,
+                "current_cruise_id": request.currentCruiseId,
+                "current_cabin": request.description,
                 "action": "",
             },
             "config": RunnableConfig(
@@ -128,30 +137,21 @@ async def chat(request: ChatRequest):
                 run_id=run_id,
             ),
         }
-        response = agent_main.invoke(**kwargs)
-        db_tool.ingest_history(session_id, request.message, "user")
-        list_cruise_id = [cruise.get("id") for cruise in response.get("list_cruises", [])]
-        db_tool.ingest_history(
-            session_id,
-            response["messages"][-1].content,
-            "ai",
-            list_cruise_id,
-            response.get("list_cabin", []),
-        )
+        ai_message, state = chat_response(**kwargs, agent=agent_main)
 
         output_dict = {
-            "message": response["messages"][-1].content,
-            "cruises": response.get("list_cruises", []),
-            "currentCruiseId": response["current_cruise"].get("id", None),
+            "message": ai_message,
+            "cruises": state.get("list_cruises", []),
             "sessionId": str(session_id),
             "currency": request.currency,
             "country": request.country,
-            "description": request.description,
+            "currentCruiseId": state.get("current_cruise_id", ""),
+            "description": state.get("current_cabin", ""),
         }
-        if "action" in response.keys():
-            output_dict["action"] = response["action"]
-        if "list_cabins" in response.keys():
-            output_dict["cabins"] = response["list_cabins"]
+        if "action" in state.keys():
+            output_dict["action"] = state["action"]
+        if "list_cabins" in state.keys():
+            output_dict["cabins"] = state["list_cabins"]
         logger.info(f"Output dictionary: {output_dict}")
         return output_dict
 
