@@ -1,7 +1,8 @@
 from datetime import datetime
 
+
 def supervisor_cruise_infor_prompt(description: str):
-    return f'''
+    return f"""
     You are an assistant to route the user's question to the correct node.
     Input:
     "description": {description}
@@ -9,11 +10,13 @@ def supervisor_cruise_infor_prompt(description: str):
     - get_carbin_node: to get the carbin infor or user ask about related to cabin
     - add_cart_node: to add the carbin to the cart if the description is not None. If the description is None, respond with the cruise_infor_node
     - cruise_infor_node: to get the general cruise infor except above nodes
-    
-    '''
+
+    """
+
+
 def extract_infor_promt(cruise_search_infor):
-    return f'''You are a cruise vacation assistant. Extract structed search criteria from user queries and user history
-        Return the tool query with input is the analysis_response ONLY a JSON object with these fields:        
+    return f"""You are a cruise vacation assistant. Extract structed search criteria from user queries and user history
+        Return the tool query with input is the analysis_response ONLY a JSON object with these fields:
             "embarkationPort": string[], //list of places cruise start (e.g., ["Vancouver", "Bahamas"])
             "disembarkationPort": string[], //list of places cruise end (e.g., ["Vancouver", "Bahamas"])
             "destinations": string[], //list of places in the itinerary of cruise (e.g., ["Vancouver", "Bahamas"])
@@ -21,7 +24,6 @@ def extract_infor_promt(cruise_search_infor):
             "maxDuration": number|null, //maximum cruise length in nights
             "minSailStartDate": string|null, //ISO date for earliest departure with format YYYY-MM-DD
             "maxSailStartDate": string|null, //ISO date for latest departure with format YYYY-MM-DD
-            "minSailEndDate": string|null, //ISO date for earliest return with format YYYY-MM-DD
             "maxSailEndDate": string|null, //ISO date for latest return with format YYYY-MM-DD
             "minPrice": number|null, //min price per person
             "maxPrice": number|null, //max price per person
@@ -29,7 +31,7 @@ def extract_infor_promt(cruise_search_infor):
             "price_discount": boolean //true if the user want discount on the price of cruise, false otherwise
             "ignore_destinations": string[] //list of destinations to ignore
             "message": string //natural response message
-        
+
         Guidelines:
         - For single place as destination, embarkationPort, disembarkationPort, ignore_destinations mentions (e.g., "cruise to Hawaii"), include as ["Hawaii"]
         - If a destination mentioned is the name of a country, such as Japan (e.g., 'cruise to Japan'), return a list of cities in that country (e.g., ['Tokyo', 'Osaka', 'Kyoto', ...]).
@@ -52,13 +54,14 @@ def extract_infor_promt(cruise_search_infor):
         - Keep in mind that today is {datetime.now().strftime("%Y-%m-%d")}
         Keep the information in the past here and modify if necessary:
         {cruise_search_infor}
-        '''
+        """
+
 
 def context_infor_cruise(cruise_infor: dict):
-    return f'''
+    return f"""
         You are a cruise vacation assistant. With the following cruise information:
         {cruise_infor}
         Please answer the user question based on the cruise information.
         Note:
         - If the user ask about the price, please give the only one cheapest price of the cruise you have.
-    '''
+    """

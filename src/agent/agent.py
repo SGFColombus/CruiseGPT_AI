@@ -7,49 +7,59 @@ from langgraph.graph import StateGraph
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import MessagesState, END
-from promt.exact_infor_prompt import extract_infor_promt
-from db_tool import db_query_tool, cruise_infor_tool
+from agent.promts.exact_infor_prompt import extract_infor_promt
+from agent.tools.db_tool import db_query_tool, cruise_infor_tool
 from typing import Literal, TypedDict
 from langgraph.graph import END, START
-from promt.supervior_prompt import get_supervior_prompt
+from agent.promts.supervior_prompt import get_supervior_prompt
 from langgraph.types import Command
 from langchain_core.tools import BaseTool
 from uuid import uuid4
 import logging
-from promt.exact_infor_prompt import context_infor_cruise
 import json
-from object.cruise_search_object import CruiseSearchInfo, AgentState
-from utils import wrap_model
-from agent_cruise_infor import chatbot_cruise_infor
+from agent.objects.objects import CruiseSearchInfo, AgentState
+from agent.tools.utils.utils import wrap_model
+from agent.agent_cruise_infor import chatbot_cruise_infor
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()  # This will output to terminal
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],  # This will output to terminal
 )
 logger = logging.getLogger(__name__)
-     
+
 
 members = ["general_infor", "cruise_search", "cruise_infor", "clear_context"]
 options = members + ["FINISH"]
+
+
 class Router(TypedDict):
     next: Literal[*options]
 
+
 model = ChatOpenAI(model="gpt-4o-mini")
 
-async def supervisor_node(state: AgentState, config: dict) -> Command[Literal[*members,END]]:
+
+async def supervisor_node(
+    state: AgentState, config: dict
+) -> Command[Literal[*members, END]]:
     logger.info(f"Supervisor node called with state: {state}")
     if state["current_cruise"] is not None:
         current_cruise = state["current_cruise"]
-    wrapped_model = wrap_model(model, get_supervior_prompt(members, current_cruise), Router)
+    wrapped_model = wrap_model(
+        model, get_supervior_prompt(members, current_cruise), Router
+    )
     response = await wrapped_model.ainvoke(state, config)
     logger.info(f"Supervisor node response: {response}")
-    goto = response["next"]   
+    goto = response["next"]
     if goto == "FINISH":
         return Command(goto=END)
     return Command(goto=goto, update={"next": goto})
-def enrich_cruise_search_info(current_info: CruiseSearchInfo, update_info: CruiseSearchInfo) -> CruiseSearchInfo:
+
+
+def enrich_cruise_search_info(
+    current_info: CruiseSearchInfo, update_info: CruiseSearchInfo
+) -> CruiseSearchInfo:
     logger.info(f"===================================")
     logger.info(f"Current info: {current_info}")
     logger.info(f"Update info: {update_info}")
@@ -59,26 +69,35 @@ def enrich_cruise_search_info(current_info: CruiseSearchInfo, update_info: Cruis
     logger.info(f"Updated info: {current_info}")
     logger.info(f"===================================")
     return current_info
+
+
 async def cruise_search_node(state: AgentState, config: dict) -> AgentState:
     logger.info(f"Cruise search node called with state: {state}")
     model_with_structured_output = model.with_structured_output(CruiseSearchInfo)
-    wrapped_model = wrap_model(model=model_with_structured_output,
-                               system_prompt=extract_infor_promt(state.get("cruise_search_info", "")))
+    wrapped_model = wrap_model(
+        model=model_with_structured_output,
+        system_prompt=extract_infor_promt(state.get("cruise_search_info", "")),
+    )
     response = await wrapped_model.ainvoke(state, config)
-    cruise_search_info = enrich_cruise_search_info(state.get("cruise_search_info", CruiseSearchInfo()), response)
+    cruise_search_info = enrich_cruise_search_info(
+        state.get("cruise_search_info", CruiseSearchInfo()), response
+    )
     logger.info(f"Cruise search node response: {response}")
     logger.info(f"Cruise search info: {cruise_search_info}")
     # We return a list, because this will get added to the existing list
-    return {"messages": [HumanMessage(content=response.message, name="cruise_search")],
-            "cruises": state.get("cruises", []),
-            "current_cruise": state.get("current_cruise", {}),
-            "chat_history": state.get("chat_history", ""),
-            "currency": state.get("currency", "USD"),
-            "country": state.get("country", "US"),
-            "cruise_search_info": cruise_search_info,
-            "action": "",
-            "list_cabin": [],
-            "description": None}
+    return {
+        "messages": [HumanMessage(content=response.message, name="cruise_search")],
+        "cruises": state.get("cruises", []),
+        "current_cruise": state.get("current_cruise", {}),
+        "chat_history": state.get("chat_history", ""),
+        "currency": state.get("currency", "USD"),
+        "country": state.get("country", "US"),
+        "cruise_search_info": cruise_search_info,
+        "action": "",
+        "list_cabin": [],
+        "description": None,
+    }
+
 
 async def cruise_infor_node(state: AgentState, config: dict) -> AgentState:
     logger.info(f"Cruise infor node called with state: {state}")
@@ -89,16 +108,23 @@ async def cruise_infor_node(state: AgentState, config: dict) -> AgentState:
     # response = await wrapped_model.ainvoke(state, config)
     # logger.info(f"Cruise infor node response: {response}")
     response = await chatbot_cruise_infor.ainvoke(state, config)
-    return {"messages": [HumanMessage(content=response.get("messages", [""])[0].content, name="cruise_infor")],
-            "cruises": response.get("cruises", []),
-            "current_cruise": state.get("current_cruise", {}),
-            "chat_history": state.get("chat_history", ""),
-            "currency": state.get("currency", "USD"),
-            "country": state.get("country", "US"),
-            "cruise_search_info": state.get("cruise_search_info", CruiseSearchInfo()),
-            "action": response.get("action", ""),
-            "list_cabin": response.get("list_cabin", []),
-            "description": response.get("description", None)}
+    return {
+        "messages": [
+            HumanMessage(
+                content=response.get("messages", [""])[0].content, name="cruise_infor"
+            )
+        ],
+        "cruises": response.get("cruises", []),
+        "current_cruise": state.get("current_cruise", {}),
+        "chat_history": state.get("chat_history", ""),
+        "currency": state.get("currency", "USD"),
+        "country": state.get("country", "US"),
+        "cruise_search_info": state.get("cruise_search_info", CruiseSearchInfo()),
+        "action": response.get("action", ""),
+        "list_cabin": response.get("list_cabin", []),
+        "description": response.get("description", None),
+    }
+
 
 # async def add_cart_node(state: AgentState, config: dict) -> AgentState:
 #     logger.info(f"Add cart node called with state: {state}")
@@ -112,6 +138,7 @@ async def cruise_infor_node(state: AgentState, config: dict) -> AgentState:
 #             "cruise_search_info": state.get("cruise_search_info", CruiseSearchInfo()),
 #             "action": "add_cart"}
 
+
 async def general_infor_node(state: AgentState, config: dict) -> AgentState:
     logger.info(f"General infor node called with state: {state}")
     wrapped_model = wrap_model(model=model)
@@ -120,34 +147,42 @@ async def general_infor_node(state: AgentState, config: dict) -> AgentState:
     # cruise_id = state["current_cruise"]["id"]
     # if cruise_id is not None:
     #     cruise_infor_agent = await cruise_infor_tool.ainvoke(cruise_id, currency = state["currency"])
-    #     cruises = [cruise_infor_agent]    
+    #     cruises = [cruise_infor_agent]
     # else:
     #     cruises = state["cruises"]
-    return {"messages": [HumanMessage(content=response.content, name="general")],
-            "cruises": state.get("cruises", []),
-            "current_cruise": state.get("current_cruise", {}),
-            "chat_history": state.get("chat_history", ""),
-            "currency": state.get("currency", "USD"),
-            "country": state.get("country", "US"),
-            "cruise_search_info": state.get("cruise_search_info", CruiseSearchInfo()),
-            "action": "",
-            "list_cabin": [],
-            "description": None}   
+    return {
+        "messages": [HumanMessage(content=response.content, name="general")],
+        "cruises": state.get("cruises", []),
+        "current_cruise": state.get("current_cruise", {}),
+        "chat_history": state.get("chat_history", ""),
+        "currency": state.get("currency", "USD"),
+        "country": state.get("country", "US"),
+        "cruise_search_info": state.get("cruise_search_info", CruiseSearchInfo()),
+        "action": "",
+        "list_cabin": [],
+        "description": None,
+    }
+
 
 async def clear_context(state: AgentState, config: dict) -> AgentState:
     logger.info(f"Clear context node called with state: {state}")
-    return {"messages":  [HumanMessage(content="Your context is clear now", name="clear_context")],
-            "cruises": [],
-            "current_cruise": {},
-            "chat_history": "",
-            "currency": state.get("currency", "USD"),
-            "country": state.get("country", "US"),
-            "cruise_search_info": CruiseSearchInfo(),
-            "action": "",
-            "list_cabin": [],
-            "description": None}
+    return {
+        "messages": [
+            HumanMessage(content="Your context is clear now", name="clear_context")
+        ],
+        "cruises": [],
+        "current_cruise": {},
+        "chat_history": "",
+        "currency": state.get("currency", "USD"),
+        "country": state.get("country", "US"),
+        "cruise_search_info": CruiseSearchInfo(),
+        "action": "",
+        "list_cabin": [],
+        "description": None,
+    }
 
-def create_agent(use_tool = True, use_memory = True):
+
+def create_agent(use_tool=True, use_memory=True):
     agent = StateGraph(AgentState)
     agent.add_edge(START, "supervisor")
     agent.add_node("supervisor", supervisor_node)
@@ -172,40 +207,34 @@ def create_agent(use_tool = True, use_memory = True):
     else:
         return agent.compile()
 
-# import matplotlib.pyplot as plt
-# from PIL import Image
-# import io
-# chatbot = create_agent()
 
-# plt.imshow(Image.open(io.BytesIO(chatbot.get_graph().draw_mermaid_png())))
-# plt.show()
 if __name__ == "__main__":
     import asyncio
-    configurable = {
-            "thread_id": 1
-        }
+
+    configurable = {"thread_id": 1}
     run_id = uuid4()
     config = {"configurable": configurable}
     kwargs = {
-                "input": {"messages": [HumanMessage(content="I want to go to Lisbon in next June")],
-                          "current_cruise": {"id": "6787671d9eced029e874702b"},
-                          "currency": "USD"
-                          },
-                          
-                "config": config,
-            }
+        "input": {
+            "messages": [HumanMessage(content="I want to go to Lisbon in next June")],
+            "current_cruise": {"id": "6787671d9eced029e874702b"},
+            "currency": "USD",
+        },
+        "config": config,
+    }
     kwargs2 = {
-                "input": {"messages": [HumanMessage(content="I want to go to Vancouver instead")],
-                          "current_cruise": {"id": "6787671d9eced029e874702b"},
-                          "currency": "USD"
-                          },
-                "config": config,
-            }
+        "input": {
+            "messages": [HumanMessage(content="I want to go to Vancouver instead")],
+            "current_cruise": {"id": "6787671d9eced029e874702b"},
+            "currency": "USD",
+        },
+        "config": config,
+    }
     # kwargs = {
     #         "input": {"messages": [HumanMessage(content="What is the price of this cruise?")],
     #                     "current_cruise": {"id": "6787671d9eced029e874702b"},
     #                     "cruises": []},
-                        
+
     #         "config": RunnableConfig(
     #             configurable=configurable,
     #             run_id=run_id,
@@ -218,15 +247,14 @@ if __name__ == "__main__":
     # print(response)
     # print(response2)
     kwargs = {
-            "input": {"messages": [HumanMessage(content="Show me the list cabins of cruise")],
-                        "current_cruise": {"id": "6787671e9eced029e8747030"},
-                        "currency": "USD"
-                        },
-                        
-            "config": config,
-        }
-    
+        "input": {
+            "messages": [HumanMessage(content="Show me the list cabins of cruise")],
+            "current_cruise": {"id": "6787671e9eced029e8747030"},
+            "currency": "USD",
+        },
+        "config": config,
+    }
+
     chatbot = create_agent()
     response = asyncio.run(chatbot.ainvoke(**kwargs))
     print(response)
-
