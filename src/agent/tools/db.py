@@ -150,32 +150,39 @@ class DBTool:
 
     
     def get_list_cabin(self, cruise_id, currency: str = "USD", country: str = "US"):
-        cruise = self.collection.find_one({"_id": ObjectId(cruise_id)})
-        list_cabin = []
-        for price in cruise.get("prices", []):
-            if price.get("currency", "") == currency and (
-                country in price.get("countries", [])
-            ):
-                for suiteRate in price.get("suiteRates", []):
-                    for rate in suiteRate.get("rates", []):
-                        if (
-                            rate.get("status", "") == "A"
-                            and rate.get("fare", "") == "P2P"
-                            and rate.get("price", None) is not None
-                        ):
-                            list_cabin.append(
-                                {
-                                    "cruise_id": cruise_id,
-                                    "name": suiteRate.get("name", ""),
-                                    "description": suiteRate.get("description", ""),
-                                    "fare": rate.get("fare", ""),
-                                    "price": rate.get("price", None),
-                                    "priceStatus": rate.get("priceStatus", ""),
-                                    "originalPrice": rate.get("originalPrice", None),
-                                    "cabinUrl": suiteRate.get("cabinUrl", ""),
-                                }
-                            )
-        return list_cabin
+        pipeline = [
+        # Match the specific cruise
+        {"$match": {"_id": ObjectId(cruise_id)}},
+        
+        # Unwind the arrays to flatten the nested structure
+        {"$unwind": "$prices"},
+        {"$unwind": "$prices.suiteRates"},
+        {"$unwind": "$prices.suiteRates.rates"},
+        
+        # Match the specific conditions
+        {"$match": {
+            "prices.currency": currency,
+            "prices.countries": country,
+            "prices.suiteRates.rates.status": "A",
+            "prices.suiteRates.rates.fare": "P2P",
+            "prices.suiteRates.rates.price": {"$ne": None}
+        }},
+        
+        # Project only the fields we need
+        {"$project": {
+            "_id": 0,
+            "cruise_id": {"$toString": "$_id"},
+            "name": "$prices.suiteRates.name",
+            "description": "$prices.suiteRates.description",
+            "fare": "$prices.suiteRates.rates.fare",
+            "price": "$prices.suiteRates.rates.price",
+            "priceStatus": "$prices.suiteRates.rates.priceStatus",
+            "originalPrice": "$prices.suiteRates.rates.originalPrice",
+            "cabinUrl": "$prices.suiteRates.cabinUrl"
+        }}
+    ]
+    
+        return list(self.collection.aggregate(pipeline))
 
     def ingest_history(
         self, session_id, message, sender, cruise_list=[], list_cabin=[]
