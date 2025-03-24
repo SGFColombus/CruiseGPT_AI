@@ -166,6 +166,7 @@ class DBTool:
                             list_cabin.append(
                                 {
                                     "cruise_id": cruise_id,
+                                    "title": cruise.get("title", ""),
                                     "name": suiteRate.get("name", ""),
                                     "description": suiteRate.get("description", ""),
                                     "fare": rate.get("fare", ""),
