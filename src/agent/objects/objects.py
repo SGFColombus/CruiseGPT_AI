@@ -101,7 +101,7 @@ class AgentState(BaseModel):
     messages: Annotated[list[AnyMessage], add_messages]
     chat_history: str | None = None
     currency: str = "USD"
-    action: str | None = None
+    action: str = ""
     cruise_search_info: CruiseSearchInfo | None = None
     list_cruises: list[dict] = []
     list_cabins: list[dict] = []

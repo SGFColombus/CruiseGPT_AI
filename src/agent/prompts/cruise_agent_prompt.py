@@ -7,7 +7,6 @@ cruise_assistant_prompt = """#Purpose:\nYou are a helpful customer support assis
     4. Cruise/Cabin with Demonstrative pronouns, such as this, current should be refered to the current one.
     \n\n
     #Current/This Cruise Id: {current_cruise_id}\n\n
-    #Current/This Cabin List: {list_cabins}\n\n
     #Current/This Cabin Name: {current_cabin}\n\n
     """
 
