@@ -1,16 +1,17 @@
 import sys
 import os
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
 import os
-from pymongo import MongoClient
+from pymongo import MongoClient, ReturnDocument
 import dotenv
 from datetime import datetime
 import re
 from bson import ObjectId
+from agent.tools.db.schema.cabin_item import CabinItem
+from datetime import datetime, timezone
 
 from agent.tools.utils.utils import enrich_cruise
-from pprint import pprint
 
 dotenv.load_dotenv()
 
@@ -219,28 +220,39 @@ class DBTool:
                 )
             return message_history
 
+    def save_cabin_to_cart(
+        self,
+        user_id: ObjectId,
+        cabin_item: CabinItem,
+    ):
+        new_item = cabin_item.model_dump(by_alias=True)
+
+        updated_cart = self.db["carts"].find_one_and_update(
+            {"user_id": ObjectId(user_id)},
+            {
+                "$push": {"items": new_item},
+                "$set": {"updatedAt": datetime.now(timezone.utc)},
+            },
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        out = {
+            "cart_id": str(updated_cart["_id"]),
+            "user_id": user_id,
+        }
+        new_item["_id"] = str(new_item["_id"])
+        out = out | new_item
+
+        return out
+
+
 
 if __name__ == "__main__":
-    import asyncio
 
     db_tool = DBTool()
-    preferences = {
-        # "departureAfter": None,
-        # "departureBefore": "2025-12-31",
-        # "destinations": ["Lisbon"],
-        # "message": "Here are some cruises to Lisbon",
-        "minPrice": 1000,
-        "maxPrice": 100000,
-        # "price_discount": False
-    }
-
-    pprint(
-        asyncio.run(
-            db_tool.get_list_cabin(
-                cruise_id="6787671e9eced029e874702d",
-                currency="AUD",
-                country="AS",
-            )
-        )
+    item = CabinItem(
+        cruiseId="6787675f9eced029e874720c",
+        description="test",
     )
-    # print(asyncio.run(db_tool.get_cruise_infor("DA250816C18")))
+    res = db_tool.save_cabin_to_cart("67bc43923f9f1b182eb81908", item)
+    print(res)
