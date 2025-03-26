@@ -1,8 +1,11 @@
+
 [project]
-name = "repl-nix-cruisecompanion"
+name = "cruise-companion"
 version = "0.1.0"
-description = "Add your description here"
-authors = ["Your Name <your.email@domain.com>"]
+description = "A cruise companion agent system"
+authors = [
+    "Replit User <user@replit.com>"
+]
 requires-python = ">=3.11"
 dependencies = [
     "aiohttp>=3.11.11",
