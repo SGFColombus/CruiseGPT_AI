@@ -32,6 +32,3 @@ dependencies = [
     "scikit-image",
     "faiss-cpu",
     "langmem"]
-
-[tool.poetry.dependencies]
-python = "3.11"
