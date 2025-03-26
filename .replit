@@ -1,0 +1,9 @@
+modules = ["bash", "python-base-3.11"]
+run = "python src/agent_server.py"
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+run = ["sh", "-c", "python src/agent_server.py"]
+deploymentTarget = "cloudrun"

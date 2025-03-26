@@ -30,5 +30,4 @@ dependencies = [
     "langmem"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-langgraph = "^1.0.0"  # Replace with the correct version if known
+python = "3.11"
