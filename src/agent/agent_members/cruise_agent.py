@@ -214,7 +214,9 @@ def payment(
                 ToolMessage(content=confirm_message.content, tool_call_id=tool_call_id),
                 HumanMessage(content=user_confirm),
             ],
-            "action": "show_user_form",
+            "action": (
+                "show_user_form" if do_continue.content == "yes" else ""
+            ),
             "func_routing": (
                 "passenger_info" if do_continue.content == "yes" else "cruise_assistant"
             ),
@@ -277,29 +279,14 @@ def assistant(state: AgentState):
         current_cabin=state.current_cabin,
     )
     llm_with_tools = llm.bind_tools([*tools, payment], parallel_tool_calls=False)
-    # return {
-    #     "messages": [
-    #         llm_with_tools.invoke(
-    #             [SystemMessage(content=cruise_assistant_prompt_with_current_cruise_id)]
-    #             + state.messages
-    #         )
-    #     ]
-    # }
-
-    return Command(
-        update={
-            "messages": [
-                llm_with_tools.invoke(
-                    [
-                        SystemMessage(
-                            content=cruise_assistant_prompt_with_current_cruise_id
-                        )
-                    ]
-                    + state.messages
-                )
-            ]
-        },
-    )
+    return {
+        "messages": [
+            llm_with_tools.invoke(
+                [SystemMessage(content=cruise_assistant_prompt_with_current_cruise_id)]
+                + state.messages
+            )
+        ]
+    }
 
 
 def assistant_route_tools(state: AgentState, config: dict):

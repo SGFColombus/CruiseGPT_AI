@@ -82,17 +82,17 @@ app.add_middleware(
 
 
 def chat_response(user_input: dict, config: dict, agent):
-    snapshot = agent.get_state(config)
+    snapshot = agent.get_state(config, subgraphs=True)
     if snapshot.next:
         value_from_human = user_input["messages"][-1].content
         messages = agent.invoke(Command(resume=value_from_human), config=config)
     else:
         messages = agent.invoke(input=user_input, config=config)
 
-    snapshot = agent.get_state(config)
+    snapshot = agent.get_state(config, subgraphs=True)
     if snapshot.next:
         ai_message = snapshot.tasks[0].interrupts[0].value
-        return ai_message, snapshot.tasks[0].state
+        return ai_message, snapshot.tasks[0].state.values
     return messages["messages"][-1].content, snapshot.values
 
 
