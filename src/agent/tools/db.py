@@ -134,6 +134,9 @@ class DBTool:
         # price discount conditions
         if preferences.get("price_discount") is True:
             query["prices.suiteRates.rates.priceStatus"] = "D"
+            
+        if preferences.get("is_expedition") is True:
+            query["isExpedition"] = True
 
         # Fix sort syntax
         cruises = list(self.collection.find(query).sort("sailStartDate", 1))

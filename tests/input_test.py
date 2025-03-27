@@ -34,6 +34,7 @@ json_attributes = [
     "round_trip",
     "ignore_destinations",
     "price_discount",
+    "is_expedition",
 ]
 
 # Define the columns
@@ -60,7 +61,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Great choice! You\'ll be heading to Vancouver.",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -71,7 +73,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises lasting more than 10 days",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -82,7 +85,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises departing from Hong Kong",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -93,7 +97,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises arriving at Singapore",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -104,7 +109,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises that visit Gibraltar",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -115,7 +121,8 @@ sample_data = [
             '"minSailStartDate": "2025-01-01","maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises starting after January 1, 2025",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -126,7 +133,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are 11-day cruises ending in Singapore",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -137,7 +145,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises from Hong Kong to Asia",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -148,7 +157,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises between 7 and 14 days",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -159,7 +169,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are round-trip cruises",'
-            '"round_trip": true,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": true,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -170,7 +181,8 @@ sample_data = [
             '"minSailStartDate": "2025-05-27","maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises starting from May 27, 2025",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -181,7 +193,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises to Europe",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -192,7 +205,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises that visit Athens",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -203,7 +217,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": 18000,"minPrice": null,'
             '"message": "Here are cruises from New York under $18000",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -214,7 +229,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": 10000,"minPrice": null,'
             '"message": "Here are cruises to South America under $10000",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -226,7 +242,8 @@ sample_data = [
             '"minSailEndDate": "2024-06-20","maxSailEndDate": "2024-06-20",'
             '"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises to Barcelona from June 5th to June 20th",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -237,7 +254,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": "2024-10-26","maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises from Singapore to Benoa ending before October 26th",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -248,7 +266,8 @@ sample_data = [
             '"minSailStartDate": "2024-06-04","maxSailStartDate": "2024-07-17",'
             '"minSailEndDate": null,"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises from Darwin to Kimberley between June 4th and July 17th",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     }, 
     {
@@ -259,7 +278,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": 5000,"minPrice": null,'
             '"message": "Here are cruises under $5000",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -270,7 +290,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": 4000,"minPrice": 2000,'
             '"message": "Here are cruises between $2000 and $4000",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     }, 
     {
@@ -281,7 +302,8 @@ sample_data = [
             '"minSailStartDate": "2025-03-01","maxSailStartDate": "2025-05-31",'
             '"minSailEndDate": null,"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises between March and May 2025",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -292,7 +314,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises less than 20 days",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -303,7 +326,8 @@ sample_data = [
             '"minSailStartDate": "2025-05-13","maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises departing after May 13, 2025",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -314,7 +338,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": "2025-03-21","maxSailEndDate": "2025-03-21",'
             '"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises ending on March 21, 2025",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -325,7 +350,8 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises that avoid Manaus",'
-            '"round_trip": false,"ignore_destinations": ["Manaus"],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": ["Manaus"],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -336,7 +362,8 @@ sample_data = [
             '"minSailStartDate": "2024-04-01","maxSailStartDate": "2024-04-30",'
             '"minSailEndDate": null,"maxSailEndDate": null,"maxPrice": 22200,"minPrice": null,'
             '"message": "Here are cruises to Vancouver starting in April under $22,200",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -347,7 +374,8 @@ sample_data = [
             '"minSailStartDate": "2024-11-01","maxSailStartDate": "2024-12-15",'
             '"minSailEndDate": null,"maxSailEndDate": null,"maxPrice": 19000,"minPrice": null,'
             '"message": "Here are Mediterranean cruises between November 1st and December 15th under $19,000",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -358,7 +386,8 @@ sample_data = [
             '"minSailStartDate": "2024-05-01","maxSailStartDate": "2024-05-31",'
             '"minSailEndDate": null,"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are Transoceanic cruises in May visiting Mindelo or Qaqortoq",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -369,7 +398,8 @@ sample_data = [
             '"minSailStartDate": "2024-03-01","maxSailStartDate": "2024-03-31",'
             '"minSailEndDate": null,"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are cruises to Tokyo starting in March",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": false}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": false}]'
         )
     },
     {
@@ -380,9 +410,46 @@ sample_data = [
             '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
             '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
             '"message": "Here are all cruises with special discounts",'
-            '"round_trip": false,"ignore_destinations": [],"price_discount": true}]'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": true,'
+            '"is_expedition": false}]'
         )
-    }
+    },
+    {
+        "User Message": "I'm looking for expedition cruises to Antarctica",
+        "Expected Features Extraction": (
+            '[{"embarkationPort": [],"disembarkationPort": [],'
+            '"destinations": ["Antarctica"],"minDuration": null,"maxDuration": null,'
+            '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
+            '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
+            '"message": "Here are expedition cruises to Antarctica",'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": true}]'
+        )
+    },
+    {
+        "User Message": "Show me expedition voyages to the Arctic",
+        "Expected Features Extraction": (
+            '[{"embarkationPort": [],"disembarkationPort": [],'
+            '"destinations": ["Arctic"],"minDuration": null,"maxDuration": null,'
+            '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
+            '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
+            '"message": "Here are expedition cruises to the Arctic",'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": true}]'
+        )
+    },
+    {
+        "User Message": "Find expedition-style cruises to the Galapagos Islands",
+        "Expected Features Extraction": (
+            '[{"embarkationPort": [],"disembarkationPort": [],'
+            '"destinations": ["Galapagos Islands"],"minDuration": null,"maxDuration": null,'
+            '"minSailStartDate": null,"maxSailStartDate": null,"minSailEndDate": null,'
+            '"maxSailEndDate": null,"maxPrice": null,"minPrice": null,'
+            '"message": "Here are expedition cruises to the Galapagos Islands",'
+            '"round_trip": false,"ignore_destinations": [],"price_discount": false,'
+            '"is_expedition": true}]'
+        )
+    },
 ]
 
 
