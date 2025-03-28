@@ -11,7 +11,7 @@ def enrich_cruise(cruise: dict, currency: str = "USD", country: str = "US"):
     prices = []
     for price in cruise.get("prices", []):
         if price.get("currency", "") != currency and (
-            "US" not in price.get("countries", [])
+            country not in price.get("countries", [])
         ):
             continue
         if "suiteRates" in price.keys():

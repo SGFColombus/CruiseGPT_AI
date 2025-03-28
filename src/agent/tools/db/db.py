@@ -145,6 +145,8 @@ class DBTool:
         enriched_cruises = []
         for cruise in cruises:
             enriched_cruise = enrich_cruise(cruise, currency, country)
+            if enriched_cruise["price"] is None:
+                continue
             enriched_cruises.append(enriched_cruise)
         return enriched_cruises
 
@@ -244,7 +246,6 @@ class DBTool:
         out = out | new_item
 
         return out
-
 
 
 if __name__ == "__main__":
