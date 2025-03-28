@@ -261,8 +261,9 @@ def cruise_search_node(state: AgentState, config: dict) -> AgentState:
     response = llm.invoke(
         [
             SystemMessage(content=cruise_search_prompt),
-            AIMessage(content=f"Total  cruise found: {total_number_of_cruises}"),
-            HumanMessage(content=f"User preference: {user_preferences}"),
+            AIMessage(
+                content=f"\n\nUser Preferences: {user_preferences}\n\n Total  cruises found: {total_number_of_cruises}"
+            ),
         ]
     )
 

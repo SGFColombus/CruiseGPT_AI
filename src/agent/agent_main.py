@@ -44,7 +44,7 @@ def supervisor_node(state: AgentState, config: dict):
     logger.info(f"Supervisor node called with state: {state}")
 
     routing_agent = router.invoke(
-        [SystemMessage(content=agent_main_routing_prompt), state.messages[-1]]
+        [SystemMessage(content=agent_main_routing_prompt)] + state.messages
     )
     return {"agent_routing": routing_agent.step}
 
@@ -59,8 +59,10 @@ def routing(state: AgentState, config: dict):
 
 def general_node(state: AgentState, config: dict) -> AgentState:
     logger.info(f"General infor node called with state: {state}")
+    prompt = "You are a general information agent. You are responsible for providing general information to the user. However, it's under development, so respond with suggestion that clarify query related to cruise agent."
+
     return {
-        "messages": ["this is from general"],
+        "messages": [llm.invoke([SystemMessage(content=prompt)] + state.messages)],
     }
 
 
