@@ -33,3 +33,23 @@ cruise_search_prompt = """#Purpose:\nYou are a specialized agent in cruise assis
     3. Your response should be concise and relevant to user's query, don't add halucination.
     4. Respond with plain text only. Do not use any Markdown formatting, special characters. Do not add any url, link, cruise id in your response. Avoid using symbols like *, #, backticks, or dashes. Provide your answer in simple sentences without formatting syntax.\n\n
 """
+
+payment_infor_extract_prompt = """You are specilized for information extraction. From user query, please extract user information based on this schema:
+    - userId: str | None
+    - contactInfo:
+        {
+            title: str,
+            firstName: str,
+            lastName: str,
+            email: str,
+            phone: str
+        }
+    - shippingAddress: str | None
+    - billingAddress: str | None
+    - totalAmount: int
+    - status: Literal["pending", "paid", "failed", "cancelled", "refunded"]
+    - paymentMethod: Literal["stripe", "paypal", "momo", "zalo", "bank_transfer"] | None
+    - transactionId: str | None
+    - items: List[str]
+
+    """

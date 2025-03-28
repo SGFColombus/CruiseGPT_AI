@@ -21,6 +21,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from langchain.prompts import ChatPromptTemplate
 from agent.tools.db.db import DBTool, CabinItem
+from agent.tools.db.schema.order_item import OrderIn
 from typing import Annotated
 from langgraph.prebuilt import InjectedState
 from langchain_core.runnables.config import RunnableConfig
@@ -33,6 +34,7 @@ from agent.prompts.cruise_agent_prompt import (
     cruise_assistant_prompt,
     cruise_router_prompt,
     cruise_search_prompt,
+    payment_infor_extract_prompt
 )
 
 db_tool = DBTool()
@@ -214,9 +216,7 @@ def payment(
                 ToolMessage(content=confirm_message.content, tool_call_id=tool_call_id),
                 HumanMessage(content=user_confirm),
             ],
-            "action": (
-                "show_user_form" if do_continue.content == "yes" else ""
-            ),
+            "action": ("show_user_form" if do_continue.content == "yes" else ""),
             "func_routing": (
                 "passenger_info" if do_continue.content == "yes" else "cruise_assistant"
             ),
@@ -301,15 +301,29 @@ def assistant_route_tools(state: AgentState, config: dict):
     return "tools"
 
 
+
+
 def passenger_info_node(state: AgentState, config: dict):
     confirm_message = llm.invoke(
         "Politely ask the user about their passenger information."
     )
     passenger_info = interrupt(confirm_message.content)
+
+    infor_extractor = llm.with_structured_output(OrderIn)
+    order: OrderIn = infor_extractor.invoke(
+        [SystemMessage(payment_infor_extract_prompt), HumanMessage(content=passenger_info)]
+    )
+    order.userId = config.get("configurable", {}).get("user_id")
+
+    try:
+        db_tool.save_order(order)
+        message = "Order saved successfully"
+    except:
+        message = "Failed to save order"
     return Command(
         update={
             "messages": [
-                AIMessage(content=confirm_message.content),
+                AIMessage(content=message),
                 HumanMessage(content=passenger_info),
             ],
             "action": "",
