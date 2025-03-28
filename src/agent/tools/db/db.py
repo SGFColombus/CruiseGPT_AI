@@ -9,6 +9,7 @@ from datetime import datetime
 import re
 from bson import ObjectId
 from agent.tools.db.schema.cabin_item import CabinItem
+from agent.tools.db.schema.order_item import ContactInfo, OrderIn
 from datetime import datetime, timezone
 
 from agent.tools.utils.utils import enrich_cruise
@@ -244,13 +245,54 @@ class DBTool:
 
         return out
 
+    def save_order(self, order: OrderIn):
+        query = [
+            {"$match": {"userId": ObjectId(order.userId)}},
+            {
+                "$project": {
+                    "_id": 1,
+                    "items": {
+                        "$filter": {
+                            "input": "$items",
+                            "as": "item",
+                            "cond": {
+                                "$in": [
+                                    "$$item._id",
+                                    [ObjectId(_id) for _id in order.items],
+                                ]
+                            },
+                        }
+                    },
+                }
+            },
+        ]
+        cart = list(self.db["carts"].aggregate(query))
+        order_dict = order.model_dump(by_alias=True)
+        order_dict["items"] = cart[0]["items"]
+        out = self.db["orders"].insert_one(order_dict)
+        return out
+
 
 if __name__ == "__main__":
 
     db_tool = DBTool()
-    item = CabinItem(
-        cruiseId="6787675f9eced029e874720c",
-        description="test",
+    # item = CabinItem(
+    #     cruiseId="6787675f9eced029e874720c",
+    #     description="test",
+    # )
+    # res = db_tool.save_cabin_to_cart("67bc43923f9f1b182eb81908", item)
+    # print(res)
+    user_info = ContactInfo(
+        title="Mr",
+        firstName="hien",
+        lastName="tran",
+        email="hien@gmail.com",
+        phone="0909090909",
     )
-    res = db_tool.save_cabin_to_cart("67bc43923f9f1b182eb81908", item)
-    print(res)
+    order = OrderIn(
+        userId="67bc43923f9f1b182eb8fbdc",
+        contactInfo=user_info,
+        totalAmount=1000000,
+        items=["67e6251d2c346e6994cb782b"],
+    )
+    db_tool.save_order(order)
