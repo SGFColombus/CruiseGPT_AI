@@ -48,10 +48,10 @@ except Exception as e:
 class ChatRequest(BaseModel):
     message: str
     sessionId: Optional[str] = None
-    currentCruiseId: Optional[str] = None
+    currentCruiseId: Optional[str] = ""
     country: Optional[str] = "US"
     currency: Optional[str] = "USD"
-    description: Optional[str] = None
+    description: Optional[str] = ""
     userId: Optional[str] = None
 
 

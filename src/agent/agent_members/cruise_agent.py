@@ -73,6 +73,7 @@ def provide_cruise_detail(
         update={
             "messages": [ToolMessage(content=cruise_detail, tool_call_id=tool_call_id)],
             "action": "",
+            "list_cruises": [],
         }
     )
 
