@@ -34,7 +34,7 @@ from agent.prompts.cruise_agent_prompt import (
     cruise_assistant_prompt,
     cruise_router_prompt,
     cruise_search_prompt,
-    payment_infor_extract_prompt
+    payment_infor_extract_prompt,
 )
 
 db_tool = DBTool()
@@ -302,32 +302,79 @@ def assistant_route_tools(state: AgentState, config: dict):
     return "tools"
 
 
-
-
 def passenger_info_node(state: AgentState, config: dict):
     confirm_message = llm.invoke(
-        "Politely ask the user about their passenger information."
+        [SystemMessage("Politely ask the user about their passenger information.")]
+        + state.messages
     )
     passenger_info = interrupt(confirm_message.content)
 
     infor_extractor = llm.with_structured_output(OrderIn)
     order: OrderIn = infor_extractor.invoke(
-        [SystemMessage(payment_infor_extract_prompt), HumanMessage(content=passenger_info)]
+        [
+            SystemMessage(payment_infor_extract_prompt),
+            HumanMessage(content=passenger_info),
+        ]
     )
     order.userId = config.get("configurable", {}).get("user_id")
 
     try:
         db_tool.save_order(order)
         message = "Order saved successfully"
+
+        return Command(
+            update={
+                "messages": [
+                    HumanMessage(content=passenger_info),
+                    AIMessage(content=message),
+                ],
+                "action": "",
+                "func_routing": "cruise_assistant",
+            },
+        )
     except:
         message = "Failed to save order"
+        return Command(
+            update={
+                "messages": [
+                    HumanMessage(content=passenger_info),
+                    AIMessage(content=message),
+                ],
+                "action": "",
+                "func_routing": "payment_failed",
+            },
+        )
+
+
+def payment_failed(state: AgentState, config: dict):
+    confirm_message = llm.invoke(
+        # [
+        [
+            SystemMessage(
+                "Politely reply to user why payment failed. Ask them if they want to process again"
+            )
+        ]
+        + state.messages[-2:]
+    )
+    user_confirm = interrupt(confirm_message.content)
+    do_continue = llm.invoke(
+        [
+            SystemMessage(
+                content="Based on user's reponse, determine if the payment should be continued. Respond with exactly yes or no, do not add any additional information."
+            ),
+            HumanMessage(content=user_confirm),
+        ]
+    )
     return Command(
         update={
             "messages": [
-                AIMessage(content=message),
-                HumanMessage(content=passenger_info),
+                AIMessage(content=confirm_message.content),
+                HumanMessage(content=user_confirm),
             ],
-            "action": "",
+            "action": ("show_user_form" if do_continue.content == "yes" else ""),
+            "func_routing": (
+                "passenger_info" if do_continue.content == "yes" else "cruise_assistant"
+            ),
         },
     )
 
@@ -339,6 +386,7 @@ def build_cruise_agent():
     cruise_agent.add_node("cruise_assistant", assistant)
     cruise_agent.add_node("payment", ToolNode([payment]))
     cruise_agent.add_node("passenger_info", passenger_info_node)
+    cruise_agent.add_node("payment_failed", payment_failed)
 
     cruise_agent.add_node("tools", ToolNode(tools))
 
@@ -355,9 +403,17 @@ def build_cruise_agent():
         lambda state, config: state.func_routing,
         ["cruise_assistant", "passenger_info"],
     )
+    cruise_agent.add_conditional_edges(
+        "passenger_info",
+        lambda state, config: state.func_routing,
+        ["payment_failed", "cruise_assistant"],
+    )
+    cruise_agent.add_conditional_edges(
+        "payment_failed",
+        lambda state, config: state.func_routing,
+        ["passenger_info", "cruise_assistant"],
+    )
     cruise_agent.add_edge("tools", "cruise_assistant")
-    # cruise_agent.add_edge("payment", "passenger_info")
-    cruise_agent.add_edge("passenger_info", "cruise_assistant")
     cruise_agent.add_edge("cruise_search", END)
 
     cruise_agent.set_entry_point("cruise_supervisor")
