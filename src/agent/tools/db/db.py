@@ -178,6 +178,9 @@ class DBTool:
                                     "priceStatus": rate.get("priceStatus", ""),
                                     "originalPrice": rate.get("originalPrice", None),
                                     "cabinUrl": suiteRate.get("cabinUrl", ""),
+                                    "imagesUrl": cruise.get("imagesUrl", []),
+                                    "sailEndDate": cruise.get("sailEndDate", None),
+                                    "sailStartDate": cruise.get("sailStartDate", None),
                                 }
                             )
         return list_cabin
