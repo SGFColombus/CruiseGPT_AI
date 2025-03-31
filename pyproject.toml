@@ -1,11 +1,8 @@
-
 [project]
-name = "cruise-companion"
+name = "repl-nix-cruisecompanion"
 version = "0.1.0"
-description = "A cruise companion agent system"
-authors = [
-    "Replit User <user@replit.com>"
-]
+description = "Add your description here"
+authors = ["Your Name <your.email@domain.com>"]
 requires-python = ">=3.11"
 dependencies = [
     "aiohttp>=3.11.11",
@@ -32,3 +29,6 @@ dependencies = [
     "scikit-image",
     "faiss-cpu",
     "langmem"]
+
+[tool.poetry.dependencies]
+python = "3.11"

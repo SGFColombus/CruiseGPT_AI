@@ -1,23 +1,9 @@
-modules = ["bash", "python-3.11"]
+modules = ["bash", "python-base-3.11"]
+run = "python src/agent_server.py"
+
+[nix]
+channel = "stable-24_05"
 
 [deployment]
-run = ["bash", "-c", "python3 src/agent_server.py"]
+run = ["sh", "-c", "python src/agent_server.py"]
 deploymentTarget = "cloudrun"
-
-[workflows]
-
-[[workflows.workflow]]
-name = "Run Server"
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "bash scripts/run_api_server.sh"
-
-[[ports]]
-localPort = 80
-externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 5001
