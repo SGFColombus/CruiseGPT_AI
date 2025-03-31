@@ -91,17 +91,37 @@ def add_cabin_to_cart(
         currency=state.currency,
         quantity=1,
     )
-    list_cabins = []
     try:
+        user_id = config.get("configurable", {}).get("user_id")
+        list_cabins = []
         db_list_cabins = db_tool.get_list_cabin(state.current_cruise_id, state.currency)
         list_descriptions = [cabin["description"] for cabin in db_list_cabins]
         if state.current_cabin not in list_descriptions:
             raise NotFound(f"Cabin {state.current_cabin} not found in the cruise")
-        added_cabin = db_tool.save_cabin_to_cart(
-            user_id=config.get("configurable", {}).get("user_id"), cabin_item=cabin_item
+        cruise_info = db_tool.get_cruise_infor(
+            state.current_cruise_id, state.currency
         )
-        message = f"add cabin {str(added_cabin)} successfully"
+        if user_id is not None:
+            added_cabin = db_tool.save_cabin_to_cart(
+                user_id=config.get("configurable", {}).get("user_id"),
+                cabin_item=cabin_item,
+            )
+            message = f"add cabin {str(added_cabin)} successfully"
+
+        else:
+            print("None")
+            added_cabin = [
+                cabin
+                for cabin in db_list_cabins
+                if cabin["description"] == state.current_cabin
+            ][0]
+            message = f"add cabin {state.current_cabin} successfully"
+        # add cruise info to cabin object
+        added_cabin["imagesUrl"] = cruise_info.get("imagesUrl", [])
+        added_cabin["sailEndDate"] = cruise_info.get("sailEndDate", None)
+        added_cabin["sailStartDate"] = cruise_info.get("sailStartDate", None)
         list_cabins += [added_cabin]
+
     except NotFound as e:
         message = e
     except Exception as e:
