@@ -5,9 +5,9 @@ cruise_assistant_prompt = """#Purpose:\nYou are a helpful customer support assis
     2. Do not add any url or link in your response."
     3. Respond with plain text only. Do not use any Markdown formatting, special characters. Avoid using symbols like *, #, backticks, or dashes. Provide your answer in simple sentences without formatting syntax.
     4. Cruise/Cabin with Demonstrative pronouns, such as this, current should be refered to the current one.
+    5. Do not going to details about each cruise/cabin, do not need to mention prices if user did not ask for.
     \n\n
     #Current/This Cruise Id: {current_cruise_id}\n\n
-    #Current/This Cabin List: {list_cabins}\n\n
     #Current/This Cabin Name: {current_cabin}\n\n
     """
 
@@ -30,7 +30,27 @@ cruise_search_prompt = """#Purpose:\nYou are a specialized agent in cruise assis
     #Goal:\nYour task is write a summary about a list of cruises which are filtered based on user preferences.\n\n
     #Instruction:\n
     1. Based on the context of user preferences and the list of found cruises, write a reponse to user what you found.
-    2. You should repeat user's preferences first, then declare total number of cruises found and summary of example cruises found. Don't go into details about each cruise. If there is NO result cruise found, ask user to modify their preferences.\n
+    2. You should repeat user's preferences first, do not mention criteria that user did not ask for, then declare total number of cruises found and summary of example cruises found. Don't go into details about each cruise. If there is NO result cruise found, ask user to modify their preferences. Showing exact founded cruise number, do not add halucication.\n
     3. Your response should be concise and relevant to user's query, don't add halucination.
     4. Respond with plain text only. Do not use any Markdown formatting, special characters. Do not add any url, link, cruise id in your response. Avoid using symbols like *, #, backticks, or dashes. Provide your answer in simple sentences without formatting syntax.\n\n
 """
+
+payment_infor_extract_prompt = """You are specilized for information extraction. From user query, please extract user information based on this schema:
+    - userId: str | None
+    - contactInfo:
+        {
+            title: str,
+            firstName: str,
+            lastName: str,
+            email: str,
+            phone: str
+        }
+    - shippingAddress: str | None
+    - billingAddress: str | None
+    - totalAmount: int
+    - status: Literal["pending", "paid", "failed", "cancelled", "refunded"]
+    - paymentMethod: Literal["stripe", "paypal", "momo", "zalo", "bank_transfer"] | None
+    - transactionId: str | None
+    - items: List[str]
+
+    """

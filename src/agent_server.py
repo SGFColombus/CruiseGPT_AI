@@ -18,7 +18,6 @@ import openai
 from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 from langchain_core.runnables import RunnableConfig
-from agent.tools.db import DBTool
 
 
 from agent.agent_main import agent_main
@@ -49,10 +48,11 @@ except Exception as e:
 class ChatRequest(BaseModel):
     message: str
     sessionId: Optional[str] = None
-    currentCruiseId: Optional[str] = None
+    currentCruiseId: Optional[str] = ""
     country: Optional[str] = "US"
     currency: Optional[str] = "USD"
-    description: Optional[str] = None
+    description: Optional[str] = ""
+    userId: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
@@ -82,17 +82,17 @@ app.add_middleware(
 
 
 def chat_response(user_input: dict, config: dict, agent):
-    snapshot = agent.get_state(config)
+    snapshot = agent.get_state(config, subgraphs=True)
     if snapshot.next:
         value_from_human = user_input["messages"][-1].content
         messages = agent.invoke(Command(resume=value_from_human), config=config)
     else:
         messages = agent.invoke(input=user_input, config=config)
 
-    snapshot = agent.get_state(config)
+    snapshot = agent.get_state(config, subgraphs=True)
     if snapshot.next:
         ai_message = snapshot.tasks[0].interrupts[0].value
-        return ai_message, snapshot.values
+        return ai_message, snapshot.tasks[0].state.values
     return messages["messages"][-1].content, snapshot.values
 
 
@@ -119,8 +119,9 @@ async def chat(request: ChatRequest):
         logger.info(f"Processing chat request: {request}")
         session_id = request.sessionId
         session_id = session_id.replace('"', "")
-        run_id = session_id
-        configurable = {"thread_id": session_id}
+        user_id = request.userId
+        # run_id = session_id
+        configurable = {"thread_id": session_id, "user_id": user_id}
         kwargs = {
             "user_input": {
                 "messages": [HumanMessage(content=request.message)],
@@ -134,7 +135,7 @@ async def chat(request: ChatRequest):
             },
             "config": RunnableConfig(
                 configurable=configurable,
-                run_id=run_id,
+                # run_id=run_id,
             ),
         }
         ai_message, state = chat_response(**kwargs, agent=agent_main)

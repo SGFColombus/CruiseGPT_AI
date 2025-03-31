@@ -20,6 +20,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from agent.objects.objects import AgentState
 from agent.agent_members.cruise_agent import build_cruise_agent
 
+from agent.prompts.agent_main_prompt import agent_main_routing_prompt
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,23 +42,16 @@ router = llm.with_structured_output(Route)
 
 def supervisor_node(state: AgentState, config: dict):
     logger.info(f"Supervisor node called with state: {state}")
-    prompt = (
-        "You are a supervisor to routing task for specilized agent in cruise assitance system. Please choose the agent you want to route to following the instruction:\n"
-        "1. Cruise agent: Process task relevant to cruises: searching/querying cruises: date, prices, destinations, etc, and booking/cancel cabin. This is used when user mentions cruises, cabin, city, trips \n"
-        "2. General agent: General information, not related to any of the agent above\n"
-        "\nNotice:"
-        "- Cabin is a room in cruise."
-        "- If the user ask about one destination about cityname, it usually means the user want to search cruise about this city, respond with the cruise_search worker."
-        "- If the user mention paying/ booking, it usually means the user want to pay/book for their current cabin cruise."
+
+    routing_agent = router.invoke(
+        [SystemMessage(content=agent_main_routing_prompt)] + state.messages
     )
-    routing_agent = router.invoke([SystemMessage(content=prompt), state.messages[-1]])
     return {"agent_routing": routing_agent.step}
 
 
 def routing(state: AgentState, config: dict):
     logger.info(f"Routing node called with state: {state}")
     routing_agent = state.agent_routing
-    print(f"Routing agent: {routing_agent}")
     if routing_agent == "cruise_node":
         return "cruise_node"
     return "general_node"
@@ -65,8 +59,10 @@ def routing(state: AgentState, config: dict):
 
 def general_node(state: AgentState, config: dict) -> AgentState:
     logger.info(f"General infor node called with state: {state}")
+    prompt = "You are a general information agent. You are responsible for providing general information to the user. However, it's under development, so respond with suggestion that clarify query related to cruise agent."
+
     return {
-        "messages": ["this is from general"],
+        "messages": [llm.invoke([SystemMessage(content=prompt)] + state.messages)],
     }
 
 

@@ -1,16 +1,18 @@
 import sys
 import os
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../.."))
 import os
-from pymongo import MongoClient
+from pymongo import MongoClient, ReturnDocument
 import dotenv
 from datetime import datetime
 import re
 from bson import ObjectId
+from agent.tools.db.schema.cabin_item import CabinItem
+from agent.tools.db.schema.order_item import ContactInfo, OrderIn
+from datetime import datetime, timezone
 
 from agent.tools.utils.utils import enrich_cruise
-from pprint import pprint
 
 dotenv.load_dotenv()
 
@@ -141,6 +143,8 @@ class DBTool:
         enriched_cruises = []
         for cruise in cruises:
             enriched_cruise = enrich_cruise(cruise, currency, country)
+            if enriched_cruise["price"] is None:
+                continue
             enriched_cruises.append(enriched_cruise)
         return enriched_cruises
 
@@ -174,6 +178,9 @@ class DBTool:
                                     "priceStatus": rate.get("priceStatus", ""),
                                     "originalPrice": rate.get("originalPrice", None),
                                     "cabinUrl": suiteRate.get("cabinUrl", ""),
+                                    "imagesUrl": cruise.get("imagesUrl", []),
+                                    "sailEndDate": cruise.get("sailEndDate", None),
+                                    "sailStartDate": cruise.get("sailStartDate", None),
                                 }
                             )
         return list_cabin
@@ -216,28 +223,79 @@ class DBTool:
                 )
             return message_history
 
+    def save_cabin_to_cart(
+        self,
+        user_id: ObjectId,
+        cabin_item: CabinItem,
+    ):
+        new_item = cabin_item.model_dump(by_alias=True)
+
+        updated_cart = self.db["carts"].find_one_and_update(
+            {"user_id": ObjectId(user_id)},
+            {
+                "$push": {"items": new_item},
+                "$set": {"updatedAt": datetime.now(timezone.utc)},
+            },
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        out = {
+            "cart_id": str(updated_cart["_id"]),
+            "user_id": user_id,
+        }
+        new_item["_id"] = str(new_item["_id"])
+        out = out | new_item
+
+        return out
+
+    def save_order(self, order: OrderIn):
+        query = [
+            {"$match": {"userId": ObjectId(order.userId)}},
+            {
+                "$project": {
+                    "_id": 1,
+                    "items": {
+                        "$filter": {
+                            "input": "$items",
+                            "as": "item",
+                            "cond": {
+                                "$in": [
+                                    "$$item._id",
+                                    [ObjectId(_id) for _id in order.items],
+                                ]
+                            },
+                        }
+                    },
+                }
+            },
+        ]
+        cart = list(self.db["carts"].aggregate(query))
+        order_dict = order.model_dump(by_alias=True)
+        order_dict["items"] = cart[0]["items"]
+        out = self.db["orders"].insert_one(order_dict)
+        return out
+
 
 if __name__ == "__main__":
-    import asyncio
 
     db_tool = DBTool()
-    preferences = {
-        # "departureAfter": None,
-        # "departureBefore": "2025-12-31",
-        # "destinations": ["Lisbon"],
-        # "message": "Here are some cruises to Lisbon",
-        "minPrice": 1000,
-        "maxPrice": 100000,
-        # "price_discount": False
-    }
-
-    pprint(
-        asyncio.run(
-            db_tool.get_list_cabin(
-                cruise_id="6787671e9eced029e874702d",
-                currency="AUD",
-                country="AS",
-            )
-        )
+    # item = CabinItem(
+    #     cruiseId="6787675f9eced029e874720c",
+    #     description="test",
+    # )
+    # res = db_tool.save_cabin_to_cart("67bc43923f9f1b182eb81908", item)
+    # print(res)
+    user_info = ContactInfo(
+        title="Mr",
+        firstName="hien",
+        lastName="tran",
+        email="hien@gmail.com",
+        phone="0909090909",
     )
-    # print(asyncio.run(db_tool.get_cruise_infor("DA250816C18")))
+    order = OrderIn(
+        userId="67bc43923f9f1b182eb8fbdc",
+        contactInfo=user_info,
+        totalAmount=1000000,
+        items=["67e6251d2c346e6994cb782b"],
+    )
+    db_tool.save_order(order)
