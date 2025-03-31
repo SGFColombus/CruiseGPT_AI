@@ -136,6 +136,7 @@ async def chat(request: ChatRequest):
             "config": RunnableConfig(
                 configurable=configurable,
                 # run_id=run_id,
+
             ),
         }
         ai_message, state = chat_response(**kwargs, agent=agent_main)

@@ -20,7 +20,9 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from agent.objects.objects import AgentState
 from agent.agent_members.cruise_agent import build_cruise_agent
 
+
 from agent.prompts.agent_main_prompt import agent_main_routing_prompt
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -42,7 +44,6 @@ router = llm.with_structured_output(Route)
 
 def supervisor_node(state: AgentState, config: dict):
     logger.info(f"Supervisor node called with state: {state}")
-
     routing_agent = router.invoke(
         [SystemMessage(content=agent_main_routing_prompt)] + state.messages
     )
@@ -63,6 +64,7 @@ def general_node(state: AgentState, config: dict) -> AgentState:
 
     return {
         "messages": [llm.invoke([SystemMessage(content=prompt)] + state.messages)],
+
     }
 
 

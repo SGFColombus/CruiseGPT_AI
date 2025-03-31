@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from langchain.prompts import ChatPromptTemplate
+
 from agent.tools.db.db import DBTool, CabinItem
 from agent.tools.db.schema.order_item import OrderIn
 from typing import Annotated
@@ -35,6 +36,7 @@ from agent.prompts.cruise_agent_prompt import (
     cruise_router_prompt,
     cruise_search_prompt,
     payment_infor_extract_prompt,
+
 )
 
 db_tool = DBTool()
@@ -441,6 +443,7 @@ def test(cruise_agent):
                 "messages": [message],
                 "current_cruise_id": "678767209eced029e874703d",
                 "current_cabin": "Classic Veranda Suite",
+
             },
             config=config,
         )
@@ -507,3 +510,4 @@ if __name__ == "__main__":
             )
             snapshot = cruise_agent.get_state(config)
         messages["messages"][-1].pretty_print()
+
