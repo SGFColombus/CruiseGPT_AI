@@ -43,7 +43,7 @@ payment_infor_extract_prompt = """You are specilized for information extraction.
             firstName: str,
             lastName: str,
             email: str,
-            phone: str
+            phoneNumber: str
         }
     - shippingAddress: str | None
     - billingAddress: str | None

@@ -40,6 +40,12 @@ llm = ChatOpenAI(model="gpt-4o-mini")
 router = llm.with_structured_output(Route)
 
 
+def language_detector(state: AgentState, config: dict):
+    prompt = "You are a language detector. You are responsible for detecting the language of the user's query. Respond with language of the user's query. Do not add any additional information."
+    language = llm.invoke([SystemMessage(content=prompt), state.messages[-1]])
+    return {"language": language.content}
+
+
 def supervisor_node(state: AgentState, config: dict):
     logger.info(f"Supervisor node called with state: {state}")
 
@@ -59,21 +65,32 @@ def routing(state: AgentState, config: dict):
 
 def general_node(state: AgentState, config: dict) -> AgentState:
     logger.info(f"General infor node called with state: {state}")
-    prompt = "You are a general information agent. You are responsible for providing general information to the user. However, it's under development, so respond with suggestion that clarify query related to cruise agent."
+    prompt = "You are a general information agent. You are responsible for providing general information to the user. However, it's under development, so respond with suggestion that clarify query related to cruise agent.\n\nIMPORTANT: Response must be in user's language."
 
     return {
         "messages": [llm.invoke([SystemMessage(content=prompt)] + state.messages)],
     }
 
 
+def language_translator(state: AgentState, config: dict):
+    prompt = f"You are a language translator, working in cruise industry. You are responsible for translating the user's query to the language of the user. Language style should be joyfull, but concise. The language of the user is {state.language}."
+    language_translator = llm.invoke(
+        [SystemMessage(content=prompt), state.messages[-1]]
+    )
+    return {"messages": [language_translator]}
+
+
 def create_agent():
     agent = StateGraph(AgentState)
 
+    agent.add_node("language_node", language_detector)
     agent.add_node("supervisor", supervisor_node)
     agent.add_node("cruise_node", build_cruise_agent())
     agent.add_node("general_node", general_node)
+    agent.add_node("language_translator", language_translator)
 
-    agent.add_edge(START, "supervisor")
+    agent.add_edge(START, "language_node")
+    agent.add_edge("language_node", "supervisor")
     agent.add_conditional_edges(
         "supervisor",
         routing,
@@ -82,8 +99,9 @@ def create_agent():
             "general_node": "general_node",
         },
     )
-    agent.add_edge("cruise_node", END)
-    agent.add_edge("general_node", END)
+    agent.add_edge("cruise_node", "language_translator")
+    agent.add_edge("general_node", "language_translator")
+    agent.add_edge("language_translator", END)
 
     return agent.compile(checkpointer=MemorySaver())
 
