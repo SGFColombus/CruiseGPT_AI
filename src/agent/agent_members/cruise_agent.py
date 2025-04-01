@@ -98,9 +98,7 @@ def add_cabin_to_cart(
         list_descriptions = [cabin["description"] for cabin in db_list_cabins]
         if state.current_cabin not in list_descriptions:
             raise NotFound(f"Cabin {state.current_cabin} not found in the cruise")
-        cruise_info = db_tool.get_cruise_infor(
-            state.current_cruise_id, state.currency
-        )
+        cruise_info = db_tool.get_cruise_infor(state.current_cruise_id, state.currency)
         if user_id is not None:
             added_cabin = db_tool.save_cabin_to_cart(
                 user_id=config.get("configurable", {}).get("user_id"),
@@ -109,7 +107,6 @@ def add_cabin_to_cart(
             message = f"add cabin {str(added_cabin)} successfully"
 
         else:
-            print("None")
             added_cabin = [
                 cabin
                 for cabin in db_list_cabins
@@ -277,13 +274,16 @@ def cruise_search_node(state: AgentState, config: dict) -> AgentState:
     )
     user_preferences = wrapped_model.invoke(state, config)
     list_cruises = db_tool.get_cruises(user_preferences.model_dump())
-    total_number_of_cruises = len(list_cruises)
+    prune_list_cruises = [
+        {"id": cruise["id"], "name": cruise["name"]} for cruise in list_cruises
+    ]
+    total_number_of_cruises = len(prune_list_cruises)
     list_cruises = list_cruises[:5]  ## Only take 5
     response = llm.invoke(
         [
             SystemMessage(content=cruise_search_prompt),
             AIMessage(
-                content=f"\n\nUser Preferences: {user_preferences}\n\n Total  cruises found: {total_number_of_cruises}"
+                content=f"\n\nUser Preferences: {user_preferences}\n\nFound cruises: {prune_list_cruises}\n\nTotal  cruises found: {total_number_of_cruises}"
             ),
         ]
     )
@@ -292,6 +292,7 @@ def cruise_search_node(state: AgentState, config: dict) -> AgentState:
         "messages": [response],
         "list_cruises": list_cruises,
         "list_cabins": [],
+        "action": "show_cruises"
     }
 
 
@@ -307,7 +308,7 @@ def assistant(state: AgentState):
                 [SystemMessage(content=cruise_assistant_prompt_with_current_cruise_id)]
                 + state.messages
             )
-        ]
+        ],
     }
 
 
@@ -371,7 +372,7 @@ def payment_failed(state: AgentState, config: dict):
         # [
         [
             SystemMessage(
-                "Politely reply to user why payment failed. Ask them if they want to process again"
+                "Politely reply to user why payment failed. Ask them if they want to process again. Keep it short and concise. Do not add any additional information."
             )
         ]
         + state.messages[-2:]
@@ -380,7 +381,7 @@ def payment_failed(state: AgentState, config: dict):
     do_continue = llm.invoke(
         [
             SystemMessage(
-                content="Based on user's reponse, determine if the payment should be continued. Respond with exactly yes or no, do not add any additional information."
+                content="Based on user's reponse, determine if the payment should be continued. Respond with exactly yes or no, do not add any additional information. If user's reponse, is not relevant to payment, respond with no."
             ),
             HumanMessage(content=user_confirm),
         ]
