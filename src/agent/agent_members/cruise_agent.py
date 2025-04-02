@@ -219,25 +219,14 @@ def payment(
     confirm_message = llm.invoke(
         "Politely ask the user to confirm to continue with the payment."
     )
-    user_confirm = interrupt(confirm_message.content)
-    do_continue = llm.invoke(
-        [
-            SystemMessage(
-                content="Based on user's reponse, determine if the payment should be continued. Respond with exactly yes or no, do not add any additional information."
-            ),
-            HumanMessage(content=user_confirm),
-        ]
-    )
+
+    print("PAYMENT")
+
     return Command(
         update={
             "messages": [
                 ToolMessage(content=confirm_message.content, tool_call_id=tool_call_id),
-                HumanMessage(content=user_confirm),
             ],
-            "action": ("show_user_form" if do_continue.content == "yes" else ""),
-            "func_routing": (
-                "passenger_info" if do_continue.content == "yes" else "cruise_assistant"
-            ),
         },
     )
 
@@ -292,11 +281,12 @@ def cruise_search_node(state: AgentState, config: dict) -> AgentState:
         "messages": [response],
         "list_cruises": list_cruises,
         "list_cabins": [],
-        "action": "show_cruises"
+        "action": "show_cruises",
     }
 
 
 def assistant(state: AgentState):
+    print("ASSISTANT NODE")
     cruise_assistant_prompt_with_current_cruise_id = cruise_assistant_prompt.format(
         current_cruise_id=state.current_cruise_id,
         current_cabin=state.current_cabin,
@@ -323,19 +313,42 @@ def assistant_route_tools(state: AgentState, config: dict):
     return "tools"
 
 
+def payment_confirm(state: AgentState, config: dict):
+    print("PAYMENT CONFIRM")
+    do_continue = llm.invoke(
+        [
+            SystemMessage(
+                content="Based on user's reponse, determine if the payment should be continued. Respond with exactly yes or no, do not add any additional information."
+            ),
+            state.messages[-1],
+        ]
+    )
+    return Command(
+        update={
+            "action": ("show_user_form" if do_continue.content == "yes" else ""),
+            "func_routing": (
+                "passenger_info" if do_continue.content == "yes" else "cruise_assistant"
+            ),
+        },
+    )
+
+
 def passenger_info_node(state: AgentState, config: dict):
     confirm_message = llm.invoke(
         [SystemMessage("Politely ask the user about their passenger information.")]
         + state.messages
     )
-    passenger_info = interrupt(confirm_message.content)
+    return Command(
+        update={
+            "messages": [confirm_message],
+        },
+    )
 
+
+def passenger_info_confirm(state: AgentState, config: dict):
     infor_extractor = llm.with_structured_output(OrderIn)
     order: OrderIn = infor_extractor.invoke(
-        [
-            SystemMessage(payment_infor_extract_prompt),
-            HumanMessage(content=passenger_info),
-        ]
+        [SystemMessage(payment_infor_extract_prompt), state.messages[-1]]
     )
     order.userId = config.get("configurable", {}).get("user_id")
 
@@ -346,7 +359,6 @@ def passenger_info_node(state: AgentState, config: dict):
         return Command(
             update={
                 "messages": [
-                    HumanMessage(content=passenger_info),
                     AIMessage(content=message),
                 ],
                 "action": "",
@@ -358,7 +370,6 @@ def passenger_info_node(state: AgentState, config: dict):
         return Command(
             update={
                 "messages": [
-                    HumanMessage(content=passenger_info),
                     AIMessage(content=message),
                 ],
                 "action": "",
@@ -369,7 +380,6 @@ def passenger_info_node(state: AgentState, config: dict):
 
 def payment_failed(state: AgentState, config: dict):
     confirm_message = llm.invoke(
-        # [
         [
             SystemMessage(
                 "Politely reply to user why payment failed. Ask them if they want to process again. Keep it short and concise. Do not add any additional information."
@@ -377,21 +387,27 @@ def payment_failed(state: AgentState, config: dict):
         ]
         + state.messages[-2:]
     )
-    user_confirm = interrupt(confirm_message.content)
+
+    return Command(
+        update={
+            "messages": [
+                AIMessage(content=confirm_message.content),
+            ],
+        },
+    )
+
+
+def payment_failed_confirm(state: AgentState, config: dict):
     do_continue = llm.invoke(
         [
             SystemMessage(
                 content="Based on user's reponse, determine if the payment should be continued. Respond with exactly yes or no, do not add any additional information. If user's reponse, is not relevant to payment, respond with no."
             ),
-            HumanMessage(content=user_confirm),
+            state.messages[-1],
         ]
     )
     return Command(
         update={
-            "messages": [
-                AIMessage(content=confirm_message.content),
-                HumanMessage(content=user_confirm),
-            ],
             "action": ("show_user_form" if do_continue.content == "yes" else ""),
             "func_routing": (
                 "passenger_info" if do_continue.content == "yes" else "cruise_assistant"
@@ -406,8 +422,11 @@ def build_cruise_agent():
     cruise_agent.add_node("cruise_search", cruise_search_node)
     cruise_agent.add_node("cruise_assistant", assistant)
     cruise_agent.add_node("payment", ToolNode([payment]))
+    cruise_agent.add_node("payment_confirm", payment_confirm)
     cruise_agent.add_node("passenger_info", passenger_info_node)
+    cruise_agent.add_node("passenger_info_confirm", passenger_info_confirm)
     cruise_agent.add_node("payment_failed", payment_failed)
+    cruise_agent.add_node("payment_failed_confirm", payment_failed_confirm)
 
     cruise_agent.add_node("tools", ToolNode(tools))
 
@@ -420,26 +439,36 @@ def build_cruise_agent():
         "cruise_assistant", assistant_route_tools, ["tools", "payment", END]
     )
     cruise_agent.add_conditional_edges(
-        "payment",
+        "payment_confirm",
         lambda state, config: state.func_routing,
         ["cruise_assistant", "passenger_info"],
     )
     cruise_agent.add_conditional_edges(
-        "passenger_info",
+        "passenger_info_confirm",
         lambda state, config: state.func_routing,
         ["payment_failed", "cruise_assistant"],
     )
     cruise_agent.add_conditional_edges(
-        "payment_failed",
+        "payment_failed_confirm",
         lambda state, config: state.func_routing,
         ["passenger_info", "cruise_assistant"],
     )
     cruise_agent.add_edge("tools", "cruise_assistant")
+    cruise_agent.add_edge("payment", "payment_confirm")
+    cruise_agent.add_edge("passenger_info", "passenger_info_confirm")
+    cruise_agent.add_edge("payment_failed", "payment_failed_confirm")
     cruise_agent.add_edge("cruise_search", END)
 
     cruise_agent.set_entry_point("cruise_supervisor")
 
-    cruise_agent = cruise_agent.compile(checkpointer=MemorySaver())
+    cruise_agent = cruise_agent.compile(
+        checkpointer=MemorySaver(),
+        interrupt_before=[
+            "payment_confirm",
+            "passenger_info_confirm",
+            "payment_failed_confirm",
+        ],
+    )
     return cruise_agent
 
 
@@ -508,7 +537,17 @@ if __name__ == "__main__":
         if user_input.strip().lower() in ["exit", "quit", "q"]:
             print("👋 Goodbye!")
             break
-        messages = cruise_agent.invoke(
+        # messages = cruise_agent.invoke(
+        #     input={
+        #         "messages": [HumanMessage(content=user_input)],
+        #         "current_cruise_id": "678767209eced029e874703d",
+        #         "current_cabin": "Classic Veranda Suite",
+        #         # "currency": "USD",
+        #         # "country": "AU",
+        #     },
+        #     config=config,
+        # )
+        events = cruise_agent.stream(
             input={
                 "messages": [HumanMessage(content=user_input)],
                 "current_cruise_id": "678767209eced029e874703d",
@@ -517,14 +556,41 @@ if __name__ == "__main__":
                 # "country": "AU",
             },
             config=config,
+            stream_mode="values",
         )
+        for event in events:
+            pass
         snapshot = cruise_agent.get_state(config)
         while snapshot.next:
-            print(snapshot.values)
-            ai_message = snapshot.tasks[0].interrupts[0].value
-            value_from_human = input(f"{ai_message}:\n")
-            messages = cruise_agent.invoke(
-                Command(resume=value_from_human), config=config
+            # print(snapshot)
+            print(snapshot.next)
+            ai_message = snapshot.values["messages"][-1]
+            ai_message.pretty_print()
+            # restart_node = snapshot.tasks[0].name
+            # # # ai_message = snapshot.tasks[0].interrupts[0].value
+            value_from_human = input("\nYou: ")
+            cruise_agent.update_state(
+                config,
+                {"messages": [HumanMessage(content=value_from_human)]},
+                as_node="payment",
             )
             snapshot = cruise_agent.get_state(config)
+            print("#" * 100)
+            print(snapshot)
+            print("#" * 100)
+            result = cruise_agent.invoke(None, config, stream_mode="values")
+            # events = cruise_agent.stream(
+            #     input=None,
+            #     config=config,
+            #     stream_mode="values",
+            # )
+            # for event in events:
+            #     pass
+            # # messages = cruise_agent.invoke(
+            # #     Command(resume=value_from_human), config=config
+            # # )
+            snapshot = cruise_agent.get_state(config)
+            print(snapshot)
+            messages = snapshot.values
+        print("OUT LOOP")
         messages["messages"][-1].pretty_print()
