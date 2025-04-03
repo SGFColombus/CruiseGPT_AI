@@ -105,17 +105,16 @@ class DBTool:
             # Assuming the field to check is named "destination"
             # query["destination"] = {"$not": {"$in": search_terms}}
             query["itinerary.portName"] = {"$nin": search_terms}
+            
         # price conditions
-        price_negative_conditions = []
-        if preferences.get("minPrice") is not None:
-            price_negative_conditions.append(
-                {"price": {"$lte": preferences["minPrice"]}}
-            )
-        if preferences.get("maxPrice") is not None:
-            price_negative_conditions.append(
-                {"price": {"$gte": preferences["maxPrice"]}}
-            )
-        if price_negative_conditions:
+        if preferences.get("minPrice") is not None or preferences.get("maxPrice") is not None:
+
+            price_filter = {}
+            if preferences.get("minPrice") is not None:
+                price_filter["$gte"] = preferences["minPrice"]
+            if preferences.get("maxPrice") is not None:
+                price_filter["$lte"] = preferences["maxPrice"]
+
             query["prices"] = {
                 "$elemMatch": {
                     "currency": currency,
@@ -124,15 +123,12 @@ class DBTool:
                         "$elemMatch": {
                             "status": "A",
                             "fare": "P2P",
-                        },
-                        "$not": {
-                            "$elemMatch": {
-                                "$or": price_negative_conditions,
-                            }
-                        },
-                    },
+                            "price": price_filter  # Directly use a valid price range
+                        }
+                    }
                 }
             }
+            
         # price discount conditions
         if preferences.get("price_discount") is True:
             query["prices.suiteRates.rates.priceStatus"] = "D"
