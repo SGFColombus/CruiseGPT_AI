@@ -52,7 +52,18 @@ def supervisor_node(state: AgentState, config: dict):
     routing_agent = router.invoke(
         [SystemMessage(content=agent_main_routing_prompt)] + state.messages
     )
-    return {"agent_routing": routing_agent.step}
+    current_info = ""
+    current_info += (
+        f"Current cruise id: {state.current_cruise_id}\n"
+        if state.current_cruise_id
+        else ""
+    )
+    current_info += (
+        f"Current cabin: {state.current_cabin}\n" if state.current_cabin else ""
+    )
+    current_info = HumanMessage(content=current_info)
+
+    return {"agent_routing": routing_agent.step, "messages": [current_info]}
 
 
 def routing(state: AgentState, config: dict):
