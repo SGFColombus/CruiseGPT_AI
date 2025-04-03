@@ -61,7 +61,7 @@ def supervisor_node(state: AgentState, config: dict):
     current_info += (
         f"Current cabin: {state.current_cabin}\n" if state.current_cabin else ""
     )
-    current_info = HumanMessage(content=current_info)
+    current_info = AIMessage(content=current_info)
 
     return {"agent_routing": routing_agent.step, "messages": [current_info]}
 

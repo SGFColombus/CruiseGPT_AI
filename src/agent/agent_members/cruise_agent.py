@@ -46,7 +46,7 @@ def provide_cruise_detail(
     cruise_id: str | None,
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
-    """Get the cruise detail of the current cruise such as price, duration, stops, etc, but exclude cabin.
+    """Get the cruise detail of the current cruise such as price, duration, stops, etc, but exclude cabin. Trigger tool whenever need, do not use your past knowledge.
     Args:
         cruise_id: The id of the cruise
         currency: The currency of the cruise
@@ -171,14 +171,15 @@ def cancel_cabin_from_cart(
 @tool
 def get_list_cabin_in_cruise(
     cruise_id: str | None,
-    currency: str,
+    sorted_by: Literal["price"],
+    order: Literal["asc", "desc"],
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
-    """Get list of cabin in the current cruise.
+    """Get list of cabin in the current cruise with different sorting options.
     Args:
         cruise_id: The id of the cruise
-        currency: The currency of the cruise
-        tool_call_id: The id of the tool call
+        sorted_by: The field to sort the cabin by
+        order: The order to sort the cabin by
     Returns:
         The list of cabin in the current cruise
     """
@@ -194,7 +195,16 @@ def get_list_cabin_in_cruise(
                 "action": "",
             }
         )
-    list_cabins = db_tool.get_list_cabin(cruise_id, currency)
+    list_cabins = db_tool.get_list_cabin(cruise_id, currency="USD")
+
+    if sorted_by == "price":
+        list_cabins = sorted(
+            list_cabins, key=lambda x: x["price"], reverse=order == "desc"
+        )
+    elif sorted_by == "duration":
+        list_cabins = sorted(
+            list_cabins, key=lambda x: x["duration"], reverse=order == "desc"
+        )
 
     return Command(
         update={
