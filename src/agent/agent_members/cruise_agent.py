@@ -217,7 +217,7 @@ def payment(
         - All necessary information is already provided via the state graph; do not ask for additional details.
     """
     confirm_message = llm.invoke(
-        "Politely ask the user to confirm to continue with the payment."
+        f"Politely ask the user to confirm to continue with the payment. \n\n IMPORTANT: Your language must be matched with user's language. \n\n User's language: {state.language}"
     )
     user_confirm = interrupt(confirm_message.content)
     do_continue = llm.invoke(
@@ -292,7 +292,7 @@ def cruise_search_node(state: AgentState, config: dict) -> AgentState:
         "messages": [response],
         "list_cruises": list_cruises,
         "list_cabins": [],
-        "action": "show_cruises"
+        "action": "show_cruises",
     }
 
 
@@ -325,7 +325,11 @@ def assistant_route_tools(state: AgentState, config: dict):
 
 def passenger_info_node(state: AgentState, config: dict):
     confirm_message = llm.invoke(
-        [SystemMessage("Politely ask the user about their passenger information.")]
+        [
+            SystemMessage(
+                f"Politely ask the user about their passenger information. \n\n IMPORTANT: Your language must be matched with user's language. \n\n User's language: {state.language}"
+            )
+        ]
         + state.messages
     )
     passenger_info = interrupt(confirm_message.content)
@@ -372,7 +376,7 @@ def payment_failed(state: AgentState, config: dict):
         # [
         [
             SystemMessage(
-                "Politely reply to user why payment failed. Ask them if they want to process again. Keep it short and concise. Do not add any additional information."
+                f"Politely reply to user why payment failed. Ask them if they want to process again. Keep it short and concise. Do not add any additional information. \n\n IMPORTANT: Your language must be matched with user's language. \n\n User's language: {state.language}"
             )
         ]
         + state.messages[-2:]
