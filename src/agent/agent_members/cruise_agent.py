@@ -44,7 +44,6 @@ llm = ChatOpenAI(model="gpt-4o", temperature=0.5)
 @tool
 def provide_cruise_detail(
     cruise_id: str | None,
-    currency: str,
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
     """Get the cruise detail of the current cruise such as price, duration, stops, etc, but exclude cabin.
@@ -67,7 +66,7 @@ def provide_cruise_detail(
                 "action": "",
             }
         )
-    cruise_detail = db_tool.get_cruise_infor(cruise_id, currency)
+    cruise_detail = db_tool.get_cruise_infor(cruise_id, currency="USD")
 
     return Command(
         update={
@@ -80,14 +79,22 @@ def provide_cruise_detail(
 
 @tool
 def add_cabin_to_cart(
+    cruise_id: str,
+    cabin_name: str,
     state: Annotated[AgentState, InjectedState],
     config: RunnableConfig,
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
-    """Call API for adding cabin cruise to user'cart. Cabin can be added multiple times."""
+    """Call API for adding cabin cruise to user'cart. Cabin can be added multiple times.
+    Args:
+        cruise_id: The id of the cruise
+        cabin_name: The name/description of cabin
+    Returns:
+        The cruise detail
+    """
     cabin_item = CabinItem(
-        cruiseId=state.current_cruise_id,
-        description=state.current_cabin,
+        cruiseId=cruise_id,
+        description=cabin_name,
         currency=state.currency,
         quantity=1,
     )
@@ -99,13 +106,16 @@ def add_cabin_to_cart(
         if state.current_cabin not in list_descriptions:
             raise NotFound(f"Cabin {state.current_cabin} not found in the cruise")
         cruise_info = db_tool.get_cruise_infor(state.current_cruise_id, state.currency)
+        added_cabin = None
         if user_id is not None:
-            added_cabin = db_tool.save_cabin_to_cart(
-                user_id=config.get("configurable", {}).get("user_id"),
-                cabin_item=cabin_item,
-            )
-            message = f"add cabin {str(added_cabin)} successfully"
-
+            try:
+                added_cabin = db_tool.save_cabin_to_cart(
+                    user_id=user_id,
+                    cabin_item=cabin_item,
+                )
+                message = f"add cabin {str(added_cabin)} successfully"
+            except ValueError as e:
+                message = f"failed to to cabin: {str(e)}"
         else:
             added_cabin = [
                 cabin
@@ -114,15 +124,16 @@ def add_cabin_to_cart(
             ][0]
             message = f"add cabin {state.current_cabin} successfully"
         # add cruise info to cabin object
-        added_cabin["imagesUrl"] = cruise_info.get("imagesUrl", [])
-        added_cabin["sailEndDate"] = cruise_info.get("sailEndDate", None)
-        added_cabin["sailStartDate"] = cruise_info.get("sailStartDate", None)
-        list_cabins += [added_cabin]
+        if added_cabin is not None:
+            added_cabin["imagesUrl"] = cruise_info.get("imagesUrl", [])
+            added_cabin["sailEndDate"] = cruise_info.get("sailEndDate", None)
+            added_cabin["sailStartDate"] = cruise_info.get("sailStartDate", None)
+            list_cabins += [added_cabin]
 
     except NotFound as e:
         message = e
     except Exception as e:
-        message = f"failed to cabin {state.current_cabin}"
+        message = f"failed to cabin {state.current_cabin} {str(e)}"
 
     return Command(
         update={
@@ -207,7 +218,7 @@ def payment(
 ):
     """
     Purpose:
-        Process the user's payment to complete a purchase.
+        Process the user's payment to their cabin cart.
 
     Usage:
         - Use this tool when the user indicates a desire to "make a payment" or complete their purchase.
@@ -283,13 +294,13 @@ def cruise_search_node(state: AgentState, config: dict) -> AgentState:
         [
             SystemMessage(content=cruise_search_prompt),
             AIMessage(
-                content=f"\n\nUser Preferences: {user_preferences}\n\nFound cruises: {prune_list_cruises}\n\nTotal  cruises found: {total_number_of_cruises}"
+                content=f"\n\nUser Preferences: {user_preferences}\n\n Example found cruises: {list_cruises}\n\nTotal  cruises found: {total_number_of_cruises}"
             ),
         ]
     )
 
     return {
-        "messages": [response],
+        "messages": [AIMessage(content=str(prune_list_cruises)), response],
         "list_cruises": list_cruises,
         "list_cabins": [],
         "action": "show_cruises",

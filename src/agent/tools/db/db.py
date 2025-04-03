@@ -230,13 +230,26 @@ class DBTool:
     ):
         new_item = cabin_item.model_dump(by_alias=True)
 
+        cart = self.db["carts"].find_one({"user_id": ObjectId(user_id)})
+
+        if not cart:
+            raise ValueError("Cart does not exist for this user.")
+
+        # Check if the item already exists in the cart
+        if any(
+            item["description"] == new_item["description"]
+            for item in cart.get("items", [])
+        ):
+            raise ValueError(
+                f"Item '{new_item['description']}' is already in the cart."
+            )
+
         updated_cart = self.db["carts"].find_one_and_update(
             {"user_id": ObjectId(user_id)},
             {
                 "$push": {"items": new_item},
                 "$set": {"updatedAt": datetime.now(timezone.utc)},
             },
-            upsert=True,
             return_document=ReturnDocument.AFTER,
         )
         out = {
