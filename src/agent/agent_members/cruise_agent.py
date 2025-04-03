@@ -212,6 +212,72 @@ def get_list_cabin_in_cruise(
 
 
 @tool
+def get_cart_detail(
+    config: RunnableConfig,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+):
+    """
+    Purpose:
+        Query information of user's cart.
+    Usage:
+        - Use this tool when the user ask for their cart, cabin booked.
+    """
+    user_id = config.get("configurable", {}).get("user_id")
+    if user_id is None:
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content="Please login to see your cart",
+                        tool_call_id=tool_call_id,
+                    )
+                ],
+                "action": "",
+            }
+        )
+    cart = db_tool.get_user_cart(user_id)
+    return Command(
+        update={
+            "messages": [ToolMessage(content=str(cart), tool_call_id=tool_call_id)],
+            # "action": "show_cart",
+        }
+    )
+
+
+@tool
+def get_orders_detail(
+    config: RunnableConfig,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+):
+    """
+    Purpose:
+        Query information of user's payment history/orders.
+    Usage:
+        - Use this tool when the user ask for their orders/ payments.
+    """
+    user_id = config.get("configurable", {}).get("user_id")
+    if user_id is None:
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content="Please login to see your cart",
+                        tool_call_id=tool_call_id,
+                    )
+                ],
+                "action": "",
+            }
+        )
+    orders = db_tool.get_user_orders(user_id)
+    return Command(
+        update={
+            "messages": [ToolMessage(content=str(orders), tool_call_id=tool_call_id)],
+            # "action": "show_cart",
+        }
+    )
+
+
+@tool
 def payment(
     state: Annotated[AgentState, InjectedState],
     tool_call_id: Annotated[str, InjectedToolCallId],
@@ -258,6 +324,8 @@ tools = [
     add_cabin_to_cart,
     cancel_cabin_from_cart,
     get_list_cabin_in_cruise,
+    get_cart_detail,
+    get_orders_detail,
 ]
 
 
