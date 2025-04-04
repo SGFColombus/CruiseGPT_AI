@@ -44,10 +44,9 @@ llm = ChatOpenAI(model="gpt-4o", temperature=0.5)
 @tool
 def provide_cruise_detail(
     cruise_id: str | None,
-    currency: str,
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
-    """Get the cruise detail of the current cruise such as price, duration, stops, etc, but exclude cabin.
+    """Get the cruise detail of the current cruise such as price, duration, stops, etc, but exclude cabin. Trigger tool whenever need, do not use your past knowledge.
     Args:
         cruise_id: The id of the cruise
         currency: The currency of the cruise
@@ -67,7 +66,7 @@ def provide_cruise_detail(
                 "action": "",
             }
         )
-    cruise_detail = db_tool.get_cruise_infor(cruise_id, currency)
+    cruise_detail = db_tool.get_cruise_infor(cruise_id, currency="USD")
 
     return Command(
         update={
@@ -80,14 +79,22 @@ def provide_cruise_detail(
 
 @tool
 def add_cabin_to_cart(
+    cruise_id: str,
+    cabin_name: str,
     state: Annotated[AgentState, InjectedState],
     config: RunnableConfig,
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
-    """Call API for adding cabin cruise to user'cart. Cabin can be added multiple times."""
+    """Call API for adding cabin cruise to user'cart. Cabin can be added multiple times.
+    Args:
+        cruise_id: The id of the cruise
+        cabin_name: The name/description of cabin
+    Returns:
+        The cruise detail
+    """
     cabin_item = CabinItem(
-        cruiseId=state.current_cruise_id,
-        description=state.current_cabin,
+        cruiseId=cruise_id,
+        description=cabin_name,
         currency=state.currency,
         quantity=1,
     )
@@ -98,18 +105,18 @@ def add_cabin_to_cart(
         list_descriptions = [cabin["description"] for cabin in db_list_cabins]
         if state.current_cabin not in list_descriptions:
             raise NotFound(f"Cabin {state.current_cabin} not found in the cruise")
-        cruise_info = db_tool.get_cruise_infor(
-            state.current_cruise_id, state.currency
-        )
+        cruise_info = db_tool.get_cruise_infor(state.current_cruise_id, state.currency)
+        added_cabin = None
         if user_id is not None:
-            added_cabin = db_tool.save_cabin_to_cart(
-                user_id=config.get("configurable", {}).get("user_id"),
-                cabin_item=cabin_item,
-            )
-            message = f"add cabin {str(added_cabin)} successfully"
-
+            try:
+                added_cabin = db_tool.save_cabin_to_cart(
+                    user_id=user_id,
+                    cabin_item=cabin_item,
+                )
+                message = f"add cabin {str(added_cabin)} successfully"
+            except ValueError as e:
+                message = f"failed to to cabin: {str(e)}"
         else:
-            print("None")
             added_cabin = [
                 cabin
                 for cabin in db_list_cabins
@@ -117,15 +124,16 @@ def add_cabin_to_cart(
             ][0]
             message = f"add cabin {state.current_cabin} successfully"
         # add cruise info to cabin object
-        added_cabin["imagesUrl"] = cruise_info.get("imagesUrl", [])
-        added_cabin["sailEndDate"] = cruise_info.get("sailEndDate", None)
-        added_cabin["sailStartDate"] = cruise_info.get("sailStartDate", None)
-        list_cabins += [added_cabin]
+        if added_cabin is not None:
+            added_cabin["imagesUrl"] = cruise_info.get("imagesUrl", [])
+            added_cabin["sailEndDate"] = cruise_info.get("sailEndDate", None)
+            added_cabin["sailStartDate"] = cruise_info.get("sailStartDate", None)
+            list_cabins += [added_cabin]
 
     except NotFound as e:
         message = e
     except Exception as e:
-        message = f"failed to cabin {state.current_cabin}"
+        message = f"failed to cabin {state.current_cabin} {str(e)}"
 
     return Command(
         update={
@@ -163,14 +171,15 @@ def cancel_cabin_from_cart(
 @tool
 def get_list_cabin_in_cruise(
     cruise_id: str | None,
-    currency: str,
+    sorted_by: Literal["price"],
+    order: Literal["asc", "desc"],
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
-    """Get list of cabin in the current cruise.
+    """Get list of cabin in the current cruise with different sorting options.
     Args:
         cruise_id: The id of the cruise
-        currency: The currency of the cruise
-        tool_call_id: The id of the tool call
+        sorted_by: The field to sort the cabin by
+        order: The order to sort the cabin by
     Returns:
         The list of cabin in the current cruise
     """
@@ -186,7 +195,16 @@ def get_list_cabin_in_cruise(
                 "action": "",
             }
         )
-    list_cabins = db_tool.get_list_cabin(cruise_id, currency)
+    list_cabins = db_tool.get_list_cabin(cruise_id, currency="USD")
+
+    if sorted_by == "price":
+        list_cabins = sorted(
+            list_cabins, key=lambda x: x["price"], reverse=order == "desc"
+        )
+    elif sorted_by == "duration":
+        list_cabins = sorted(
+            list_cabins, key=lambda x: x["duration"], reverse=order == "desc"
+        )
 
     return Command(
         update={
@@ -204,13 +222,79 @@ def get_list_cabin_in_cruise(
 
 
 @tool
+def get_cart_detail(
+    config: RunnableConfig,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+):
+    """
+    Purpose:
+        Query information of user's cart.
+    Usage:
+        - Use this tool when the user ask for their cart, cabin booked.
+    """
+    user_id = config.get("configurable", {}).get("user_id")
+    if user_id is None:
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content="Please login to see your cart",
+                        tool_call_id=tool_call_id,
+                    )
+                ],
+                "action": "",
+            }
+        )
+    cart = db_tool.get_user_cart(user_id)
+    return Command(
+        update={
+            "messages": [ToolMessage(content=str(cart), tool_call_id=tool_call_id)],
+            # "action": "show_cart",
+        }
+    )
+
+
+@tool
+def get_orders_detail(
+    config: RunnableConfig,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+):
+    """
+    Purpose:
+        Query information of user's payment history/orders.
+    Usage:
+        - Use this tool when the user ask for their orders/ payments.
+    """
+    user_id = config.get("configurable", {}).get("user_id")
+    if user_id is None:
+        return Command(
+            update={
+                "messages": [
+                    ToolMessage(
+                        content="Please login to see your cart",
+                        tool_call_id=tool_call_id,
+                    )
+                ],
+                "action": "",
+            }
+        )
+    orders = db_tool.get_user_orders(user_id)
+    return Command(
+        update={
+            "messages": [ToolMessage(content=str(orders), tool_call_id=tool_call_id)],
+            # "action": "show_cart",
+        }
+    )
+
+
+@tool
 def payment(
     state: Annotated[AgentState, InjectedState],
     tool_call_id: Annotated[str, InjectedToolCallId],
 ):
     """
     Purpose:
-        Process the user's payment to complete a purchase.
+        Process the user's payment to their cabin cart.
 
     Usage:
         - Use this tool when the user indicates a desire to "make a payment" or complete their purchase.
@@ -220,7 +304,7 @@ def payment(
         - All necessary information is already provided via the state graph; do not ask for additional details.
     """
     confirm_message = llm.invoke(
-        "Politely ask the user to confirm to continue with the payment."
+        f"Politely ask the user to confirm to continue with the payment. \n\n IMPORTANT: Your language must be matched with user's language. \n\n User's language: {state.language}"
     )
     user_confirm = interrupt(confirm_message.content)
     do_continue = llm.invoke(
@@ -250,6 +334,8 @@ tools = [
     add_cabin_to_cart,
     cancel_cabin_from_cart,
     get_list_cabin_in_cruise,
+    get_cart_detail,
+    get_orders_detail,
 ]
 
 
@@ -277,21 +363,25 @@ def cruise_search_node(state: AgentState, config: dict) -> AgentState:
     )
     user_preferences = wrapped_model.invoke(state, config)
     list_cruises = db_tool.get_cruises(user_preferences.model_dump())
-    total_number_of_cruises = len(list_cruises)
+    prune_list_cruises = [
+        {"id": cruise["id"], "name": cruise["name"]} for cruise in list_cruises
+    ]
+    total_number_of_cruises = len(prune_list_cruises)
     list_cruises = list_cruises[:5]  ## Only take 5
     response = llm.invoke(
         [
             SystemMessage(content=cruise_search_prompt),
             AIMessage(
-                content=f"\n\nUser Preferences: {user_preferences}\n\n Total  cruises found: {total_number_of_cruises}"
+                content=f"\n\nUser Preferences: {user_preferences}\n\n Example found cruises: {list_cruises}\n\nTotal  cruises found: {total_number_of_cruises}"
             ),
         ]
     )
 
     return {
-        "messages": [response],
+        "messages": [AIMessage(content=str(prune_list_cruises)), response],
         "list_cruises": list_cruises,
         "list_cabins": [],
+        "action": "show_cruises",
     }
 
 
@@ -307,7 +397,7 @@ def assistant(state: AgentState):
                 [SystemMessage(content=cruise_assistant_prompt_with_current_cruise_id)]
                 + state.messages
             )
-        ]
+        ],
     }
 
 
@@ -324,7 +414,11 @@ def assistant_route_tools(state: AgentState, config: dict):
 
 def passenger_info_node(state: AgentState, config: dict):
     confirm_message = llm.invoke(
-        [SystemMessage("Politely ask the user about their passenger information.")]
+        [
+            SystemMessage(
+                f"Politely ask the user about their passenger information. \n\n IMPORTANT: Your language must be matched with user's language. \n\n User's language: {state.language}"
+            )
+        ]
         + state.messages
     )
     passenger_info = interrupt(confirm_message.content)
@@ -371,7 +465,7 @@ def payment_failed(state: AgentState, config: dict):
         # [
         [
             SystemMessage(
-                "Politely reply to user why payment failed. Ask them if they want to process again"
+                f"Politely reply to user why payment failed. Ask them if they want to process again. Keep it short and concise. Do not add any additional information. \n\n IMPORTANT: Your language must be matched with user's language. \n\n User's language: {state.language}"
             )
         ]
         + state.messages[-2:]
@@ -380,7 +474,7 @@ def payment_failed(state: AgentState, config: dict):
     do_continue = llm.invoke(
         [
             SystemMessage(
-                content="Based on user's reponse, determine if the payment should be continued. Respond with exactly yes or no, do not add any additional information."
+                content="Based on user's reponse, determine if the payment should be continued. Respond with exactly yes or no, do not add any additional information. If user's reponse, is not relevant to payment, respond with no."
             ),
             HumanMessage(content=user_confirm),
         ]

@@ -225,6 +225,26 @@ class DBTool:
         cabin_item: CabinItem,
     ):
         new_item = cabin_item.model_dump(by_alias=True)
+        cart = self.db["carts"].find_one({"user_id": ObjectId(user_id)})
+
+        if not cart:
+            new_cart = {
+                "user_id": ObjectId(user_id),
+                "items": [new_item],  # Initialize with the new item
+                "createdAt": datetime.now(timezone.utc),
+                "updatedAt": datetime.now(timezone.utc),
+            }
+            self.db["carts"].insert_one(new_cart)
+            return new_cart
+
+        # Check if the item already exists in the cart
+        if any(
+            item["description"] == new_item["description"]
+            for item in cart.get("items", [])
+        ):
+            raise ValueError(
+                f"Item '{new_item['description']}' is already in the cart."
+            )
 
         updated_cart = self.db["carts"].find_one_and_update(
             {"user_id": ObjectId(user_id)},
@@ -232,7 +252,6 @@ class DBTool:
                 "$push": {"items": new_item},
                 "$set": {"updatedAt": datetime.now(timezone.utc)},
             },
-            upsert=True,
             return_document=ReturnDocument.AFTER,
         )
         out = {
@@ -245,8 +264,14 @@ class DBTool:
         return out
 
     def save_order(self, order: OrderIn):
+        item_ids = [ObjectId(_id) for _id in order.items if ObjectId.is_valid(_id)]
         query = [
-            {"$match": {"userId": ObjectId(order.userId)}},
+            {
+                "$match": {
+                    "userId": ObjectId(order.userId),
+                    "items._id": {"$in": item_ids},
+                }
+            },
             {
                 "$project": {
                     "_id": 1,
@@ -257,7 +282,7 @@ class DBTool:
                             "cond": {
                                 "$in": [
                                     "$$item._id",
-                                    [ObjectId(_id) for _id in order.items],
+                                    item_ids,
                                 ]
                             },
                         }
@@ -268,9 +293,33 @@ class DBTool:
         cart = list(self.db["carts"].aggregate(query))
         order_dict = order.model_dump(by_alias=True)
         order_dict["items"] = cart[0]["items"]
+        order_dict["userId"] = ObjectId(order.userId)
         out = self.db["orders"].insert_one(order_dict)
+
+        self.db["carts"].update_many(
+            {"userId": ObjectId(order.userId)},
+            {
+                "$pull": {
+                    "items": {
+                        "_id": {
+                            "$in": item_ids,
+                        }
+                    }
+                }
+            },
+        )
+
+        self.db["carts"].delete_many(
+            {"userId": ObjectId(order.userId), "items": {"$size": 0}}
+        )
+
         return out
 
+    def get_user_cart(self, user_id: str) -> dict:
+        return self.db["carts"].find_one({"userId": ObjectId(user_id)})
+
+    def get_user_orders(self, user_id: str) -> list[dict]:
+        return list(self.db["orders"].find({"userId": ObjectId(user_id)}))
 
 if __name__ == "__main__":
 

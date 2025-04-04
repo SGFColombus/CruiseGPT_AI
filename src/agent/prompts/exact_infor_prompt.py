@@ -52,6 +52,8 @@ def extract_infor_promt(cruise_search_infor):
         - Preserve relevant criteria from chat history when processing new input
         - Keep preferences concise and relevant to cruise features
         - Keep in mind that today is {datetime.now().strftime("%Y-%m-%d")}
+
+        # IMPORTANT: if user ask for clear context /start again, remove all previous preferences and start to build a new one.
         Keep the information in the past here and modify if necessary:
         {cruise_search_infor}
         """
