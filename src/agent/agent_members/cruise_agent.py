@@ -490,13 +490,14 @@ def cruise_search(
         update={
             "messages": [
                 ToolMessage(
-                    content=f"Found total {len(list_cruises)} cruises match with your preferences, top 5 are: {str(_prune_list_cruises)}",
+                    content=f"{str(user_preferences)} , Found total {len(list_cruises)} cruises match with your preferences, top 5 are: {str(_prune_list_cruises)}",
                     tool_call_id=tool_call_id,
                 )
             ],
             "org_list_cruises": list_cruises,
             "list_cruises": _list_cruises,
             "action": "show_cruises",
+            "cruise_search_info": user_preferences
         }
     )
 
@@ -515,7 +516,7 @@ def sorting_cruise_list_nd_get_top_k(
 ) -> AgentState:
     """Sorting current cruise list with different criteria to answer questions
     Args:
-        sorted_by: which criteria to sort the cruise list: price or duration
+        sorted_by: which criteria to sort the cruise list: price or duration. Duration is
         order: The order to sort the cruise by: asc for ascending (get lowest), desc for descending (get highest)
         top_k: the number of cruises to return, default is 5
     Returns:
