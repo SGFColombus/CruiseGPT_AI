@@ -36,7 +36,7 @@ class Route(BaseModel):
     )
 
 
-llm = ChatOpenAI(model="gpt-4o-mini")
+llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.5)
 router = llm.with_structured_output(Route)
 
 
@@ -84,7 +84,7 @@ def general_node(state: AgentState, config: dict) -> AgentState:
 
 
 def language_translator(state: AgentState, config: dict):
-    prompt = f"You are a language translator, working in cruise industry. You are responsible for translating the user's query to the language of the user. Language style should be joyfull, but concise. The language of the user is {state.language}. REMEMBER: Keep the same content, do not halucinate or add any additional information."
+    prompt = f"You are a language translator, working in cruise industry. You are responsible for translating the user's query to the language of the user. Language style should be joyfull, but concise. The language of the user is {state.language}. Remember, keep track on information, suchas numbers, dates, etc. Do not halucinate"
     language_translator = llm.invoke(
         [SystemMessage(content=prompt), state.messages[-1]]
     )

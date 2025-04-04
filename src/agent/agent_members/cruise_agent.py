@@ -38,7 +38,7 @@ from agent.prompts.cruise_agent_prompt import (
 )
 
 db_tool = DBTool()
-llm = ChatOpenAI(model="gpt-4o", temperature=0.5)
+llm = ChatOpenAI(model="gpt-4o", temperature=0.2)
 
 
 @tool
@@ -200,10 +200,6 @@ def get_list_cabin_in_cruise(
     if sorted_by == "price":
         list_cabins = sorted(
             list_cabins, key=lambda x: x["price"], reverse=order == "desc"
-        )
-    elif sorted_by == "duration":
-        list_cabins = sorted(
-            list_cabins, key=lambda x: x["duration"], reverse=order == "desc"
         )
 
     return Command(
@@ -478,6 +474,7 @@ def cruise_search(
         [SystemMessage(content=extract_infor_promt(state.cruise_search_info))]
         + state.messages[:-1]
     )
+    print(user_preferences)
     list_cruises = db_tool.get_cruises(user_preferences.model_dump())
 
     _list_cruises = list_cruises[:5] # this one return to UI

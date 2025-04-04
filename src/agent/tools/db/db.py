@@ -105,7 +105,7 @@ class DBTool:
             # Assuming the field to check is named "destination"
             # query["destination"] = {"$not": {"$in": search_terms}}
             query["itinerary.portName"] = {"$nin": search_terms}
-            
+
         # price conditions
         if preferences.get("minPrice") is not None or preferences.get("maxPrice") is not None:
 
@@ -128,7 +128,7 @@ class DBTool:
                     }
                 }
             }
-            
+
         # price discount conditions
         if preferences.get("price_discount") is True:
             query["prices.suiteRates.rates.priceStatus"] = "D"
