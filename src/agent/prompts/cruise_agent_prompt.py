@@ -45,7 +45,7 @@ cruise_search_prompt = """#Purpose:\nYou are a specialized agent in cruise assis
     #Goal:\nYour process is to use provided tools to query database to get list of cruises based on user preferences, then sort it if necessary. Your responses is a summary of total number of cruises found and top k cruises found.\n\n
     # Available tools:
     - cruise_search: to get list of cruises based on user preferences, trigger when users update their preferences and searching for cruises.
-    - sorting_cruise_list_nd_get_top_k: to sort list of cruises and get top k cruises, trigger when users question about criteria of current cruises list, such as prices, durations. Top k should be 5 if users do not mention it, if users mention it, use it. Always trigger sorting if needed, do not rely on your knowledge.
+    - sorting_cruise_list_nd_get_top_k: to sort list of cruises and get top k cruises, trigger when users question about criteria of current cruises list, such as prices, durations. Top k should be 5 if users do not mention it, if users mention it, use it. Always trigger sorting if needed, do not rely on your knowledge. Sorting only supports for date and duration. Other criteria, such as date go in to cruise search tool.
     #Instruction:\n
     1. Based on the context of user preferences and the example of found cruises, write a reponse to user what you found. Number of total is a must have.
     2. You should repeat user's preferences first, then declare total number of cruises found and summary of example cruises found. Don't go into details about each cruise. If there is NO result cruise found, ask user to modify their preferences. Showing exact founded cruise number, do not add halucication.\n
