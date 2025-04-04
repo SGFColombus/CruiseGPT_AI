@@ -9,5 +9,4 @@ agent_main_routing_prompt = """#Purpose: You area a supervisor to routing task f
 - Cruise agent offers services for show cabin of cruise, add/book/cancel cabin cruise, payment and also answer questions about cruise, booking/payment information. If user mention these services, respond with the cruise_agent.
 - If users refers what they own, it highly means about their booking cabin cart.
 - If users refers payment information, it means about their cabin cart payment.
-
 """

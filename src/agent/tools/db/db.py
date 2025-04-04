@@ -105,17 +105,16 @@ class DBTool:
             # Assuming the field to check is named "destination"
             # query["destination"] = {"$not": {"$in": search_terms}}
             query["itinerary.portName"] = {"$nin": search_terms}
+            
         # price conditions
-        price_negative_conditions = []
-        if preferences.get("minPrice") is not None:
-            price_negative_conditions.append(
-                {"price": {"$lte": preferences["minPrice"]}}
-            )
-        if preferences.get("maxPrice") is not None:
-            price_negative_conditions.append(
-                {"price": {"$gte": preferences["maxPrice"]}}
-            )
-        if price_negative_conditions:
+        if preferences.get("minPrice") is not None or preferences.get("maxPrice") is not None:
+
+            price_filter = {}
+            if preferences.get("minPrice") is not None:
+                price_filter["$gte"] = preferences["minPrice"]
+            if preferences.get("maxPrice") is not None:
+                price_filter["$lte"] = preferences["maxPrice"]
+
             query["prices"] = {
                 "$elemMatch": {
                     "currency": currency,
@@ -124,15 +123,12 @@ class DBTool:
                         "$elemMatch": {
                             "status": "A",
                             "fare": "P2P",
-                        },
-                        "$not": {
-                            "$elemMatch": {
-                                "$or": price_negative_conditions,
-                            }
-                        },
-                    },
+                            "price": price_filter  # Directly use a valid price range
+                        }
+                    }
                 }
             }
+            
         # price discount conditions
         if preferences.get("price_discount") is True:
             query["prices.suiteRates.rates.priceStatus"] = "D"
@@ -229,7 +225,6 @@ class DBTool:
         cabin_item: CabinItem,
     ):
         new_item = cabin_item.model_dump(by_alias=True)
-
         cart = self.db["carts"].find_one({"user_id": ObjectId(user_id)})
 
         if not cart:
@@ -325,7 +320,6 @@ class DBTool:
 
     def get_user_orders(self, user_id: str) -> list[dict]:
         return list(self.db["orders"].find({"userId": ObjectId(user_id)}))
-
 
 if __name__ == "__main__":
 
