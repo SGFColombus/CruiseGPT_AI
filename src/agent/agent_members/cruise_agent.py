@@ -340,7 +340,7 @@ tools = [
 
 
 class NodeRoute(BaseModel):
-    step: Literal["cruise_search", "cruise_assistant"] = Field(
+    step: Literal["search_assistant", "cruise_assistant"] = Field(
         None, description=" The next step in the routing process"
     )
 
@@ -353,36 +353,6 @@ def supervisor_node(state: AgentState, config: dict):
         [SystemMessage(content=cruise_router_prompt)] + state.messages
     )
     return {"func_routing": routing_node.step}
-
-
-def cruise_search_node(state: AgentState, config: dict) -> AgentState:
-    model_with_structured_output = llm.with_structured_output(CruiseSearchInfo)
-    wrapped_model = wrap_model(
-        model=model_with_structured_output,
-        system_prompt=extract_infor_promt(state.cruise_search_info),
-    )
-    user_preferences = wrapped_model.invoke(state, config)
-    list_cruises = db_tool.get_cruises(user_preferences.model_dump())
-    prune_list_cruises = [
-        {"id": cruise["id"], "name": cruise["name"]} for cruise in list_cruises
-    ]
-    total_number_of_cruises = len(prune_list_cruises)
-    list_cruises = list_cruises[:5]  ## Only take 5
-    response = llm.invoke(
-        [
-            SystemMessage(content=cruise_search_prompt),
-            AIMessage(
-                content=f"\n\nUser Preferences: {user_preferences}\n\n Example found cruises: {list_cruises}\n\nTotal  cruises found: {total_number_of_cruises}"
-            ),
-        ]
-    )
-
-    return {
-        "messages": [AIMessage(content=str(prune_list_cruises)), response],
-        "list_cruises": list_cruises,
-        "list_cabins": [],
-        "action": "show_cruises",
-    }
 
 
 def assistant(state: AgentState):
@@ -493,12 +463,124 @@ def payment_failed(state: AgentState, config: dict):
     )
 
 
+### Cruise search
+
+
+@tool
+def cruise_search(
+    state: Annotated[AgentState, InjectedState],
+    config: RunnableConfig,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+) -> AgentState:
+    """Extract user preference and query database to get list of cruises."""
+    model_with_structured_output = llm.with_structured_output(CruiseSearchInfo)
+    user_preferences = model_with_structured_output.invoke(
+        [SystemMessage(content=extract_infor_promt(state.cruise_search_info))]
+        + state.messages[:-1]
+    )
+    list_cruises = db_tool.get_cruises(user_preferences.model_dump())
+
+    _list_cruises = list_cruises[:5] # this one return to UI
+    _prune_list_cruises = [
+        {k: v for k, v in d.items() if k not in ["image", "mapUrl", "itinerary", "cabinUrl"]}
+        for d in _list_cruises
+    ] # this one set to context, remove unneccessary fields
+
+    return Command(
+        update={
+            "messages": [
+                ToolMessage(
+                    content=f"Found total {len(list_cruises)} cruises match with your preferences, top 5 are: {str(_prune_list_cruises)}",
+                    tool_call_id=tool_call_id,
+                )
+            ],
+            "org_list_cruises": list_cruises,
+            "list_cruises": _list_cruises,
+            "action": "show_cruises",
+        }
+    )
+
+
+from pprint import pprint
+
+
+@tool
+def sorting_cruise_list_nd_get_top_k(
+    sorted_by: Literal["price", "duration"],
+    order: Literal["asc", "desc"],
+    state: Annotated[AgentState, InjectedState],
+    config: RunnableConfig,
+    tool_call_id: Annotated[str, InjectedToolCallId],
+    top_k: int = 5,
+) -> AgentState:
+    """Sorting current cruise list with different criteria to answer questions
+    Args:
+        sorted_by: which criteria to sort the cruise list: price or duration
+        order: The order to sort the cruise by: asc for ascending (get lowest), desc for descending (get highest)
+        top_k: the number of cruises to return, default is 5
+    Returns:
+        The list of cabin in the current cruise
+    """
+    list_cruises = state.org_list_cruises
+    if sorted_by == "price":
+        list_cruises = sorted(
+            list_cruises, key=lambda x: x["price"], reverse=order == "desc"
+        )
+    elif sorted_by == "duration":
+        list_cruises = sorted(
+            list_cruises, key=lambda x: x["duration"], reverse=order == "desc"
+        )
+
+    _list_cruises = list_cruises[:5] # this one return to UI
+    _prune_list_cruises = [
+        {k: v for k, v in d.items() if k not in ["image", "mapUrl", "itinerary", "cabinUrl"]}
+        for d in _list_cruises
+    ] # this one set to context, remove unneccessary fields
+
+    return Command(
+        update={
+            "messages": [
+                ToolMessage(
+                    content=f"Sort successfully, top {top_k} are: {str(_prune_list_cruises)}",
+                    tool_call_id=tool_call_id,
+                )
+            ],
+            "list_cruises": _list_cruises,
+            "action": "show_cruises",
+        }
+    )
+
+
+def search_assistant(state: AgentState, config: dict) -> AgentState:
+
+    llm_with_tools = llm.bind_tools(
+        [cruise_search, sorting_cruise_list_nd_get_top_k], parallel_tool_calls=False
+    )
+    return {
+        "messages": [
+            llm_with_tools.invoke(
+                [SystemMessage(content=cruise_search_prompt)] + state.messages
+            )
+        ],
+    }
+
+
+def search_assistant_route_tools(state: AgentState, config: dict):
+    next_node = tools_condition(state)
+    if next_node == END:
+        return END
+    return "search_tools"
+
+
 def build_cruise_agent():
     cruise_agent = StateGraph(AgentState)
     cruise_agent.add_node("cruise_supervisor", supervisor_node)
-    cruise_agent.add_node("cruise_search", cruise_search_node)
+    cruise_agent.add_node("search_assistant", search_assistant)
     cruise_agent.add_node("cruise_assistant", assistant)
     cruise_agent.add_node("payment", ToolNode([payment]))
+    cruise_agent.add_node(
+        "search_tools", ToolNode([cruise_search, sorting_cruise_list_nd_get_top_k])
+    )
     cruise_agent.add_node("passenger_info", passenger_info_node)
     cruise_agent.add_node("payment_failed", payment_failed)
 
@@ -507,7 +589,7 @@ def build_cruise_agent():
     cruise_agent.add_conditional_edges(
         "cruise_supervisor",
         lambda state, config: state.func_routing,
-        ["cruise_search", "cruise_assistant"],
+        ["search_assistant", "cruise_assistant"],
     )
     cruise_agent.add_conditional_edges(
         "cruise_assistant", assistant_route_tools, ["tools", "payment", END]
@@ -527,8 +609,14 @@ def build_cruise_agent():
         lambda state, config: state.func_routing,
         ["passenger_info", "cruise_assistant"],
     )
+
+    cruise_agent.add_conditional_edges(
+        "search_assistant",
+        search_assistant_route_tools,
+        ["search_tools", END],
+    )
     cruise_agent.add_edge("tools", "cruise_assistant")
-    cruise_agent.add_edge("cruise_search", END)
+    cruise_agent.add_edge("search_tools", "search_assistant")
 
     cruise_agent.set_entry_point("cruise_supervisor")
 
@@ -540,12 +628,12 @@ def test(cruise_agent):
     config = {"configurable": {"thread_id": 1, "user_id": "67bc43923f9f1b182eb81908"}}
     messages = [
         # "any cruise to Europe?",
-        # "any cruise to Vancouver?",
+        "any cruise to Vancouver?",
         # "what cabins do u have?",
         # "what want to add 1st cabin to my cart?",
         # "I want to pay now",
-        "what cabin do u have?",
-        "I want to add current_cabin to cart",
+        # "what cabin do u have?",
+        # "I want to add current_cabin to cart",
     ]
     for message in messages:
         message = HumanMessage(content=message)
@@ -572,6 +660,7 @@ def test(cruise_agent):
 
 cruise_agent = build_cruise_agent()
 if __name__ == "__main__":
+    test(cruise_agent)
     # main()
     # import time
 
@@ -590,34 +679,34 @@ if __name__ == "__main__":
     # test(cruise_agent)
     # end_time = time.time()
     # print(f"Total Time taken: {end_time - start_time} seconds")
-    config = {"configurable": {"thread_id": 1, "user_id": "67bc43923f9f1b182eb81908"}}
-    while True:
-        try:
-            user_input = input("\nYou: ")
-        except (EOFError, KeyboardInterrupt):
-            print("\nExiting chat.")
-            break
+    # config = {"configurable": {"thread_id": 1, "user_id": "67bc43923f9f1b182eb81908"}}
+    # while True:
+    #     try:
+    #         user_input = input("\nYou: ")
+    #     except (EOFError, KeyboardInterrupt):
+    #         print("\nExiting chat.")
+    #         break
 
-        if user_input.strip().lower() in ["exit", "quit", "q"]:
-            print("👋 Goodbye!")
-            break
-        messages = cruise_agent.invoke(
-            input={
-                "messages": [HumanMessage(content=user_input)],
-                "current_cruise_id": "678767209eced029e874703d",
-                "current_cabin": "Classic Veranda Suite",
-                # "currency": "USD",
-                # "country": "AU",
-            },
-            config=config,
-        )
-        snapshot = cruise_agent.get_state(config)
-        while snapshot.next:
-            print(snapshot.values)
-            ai_message = snapshot.tasks[0].interrupts[0].value
-            value_from_human = input(f"{ai_message}:\n")
-            messages = cruise_agent.invoke(
-                Command(resume=value_from_human), config=config
-            )
-            snapshot = cruise_agent.get_state(config)
-        messages["messages"][-1].pretty_print()
+    #     if user_input.strip().lower() in ["exit", "quit", "q"]:
+    #         print("👋 Goodbye!")
+    #         break
+    #     messages = cruise_agent.invoke(
+    #         input={
+    #             "messages": [HumanMessage(content=user_input)],
+    #             "current_cruise_id": "678767209eced029e874703d",
+    #             "current_cabin": "Classic Veranda Suite",
+    #             # "currency": "USD",
+    #             # "country": "AU",
+    #         },
+    #         config=config,
+    #     )
+    #     snapshot = cruise_agent.get_state(config)
+    #     while snapshot.next:
+    #         print(snapshot.values)
+    #         ai_message = snapshot.tasks[0].interrupts[0].value
+    #         value_from_human = input(f"{ai_message}:\n")
+    #         messages = cruise_agent.invoke(
+    #             Command(resume=value_from_human), config=config
+    #         )
+    #         snapshot = cruise_agent.get_state(config)
+    #     messages["messages"][-1].pretty_print()

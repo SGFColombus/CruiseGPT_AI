@@ -104,8 +104,15 @@ class AgentState(BaseModel):
     language: str = "english"
     action: str = ""
     cruise_search_info: CruiseSearchInfo | None = None
-    list_cruises: list[dict] = []
+
+    # original list
+    org_list_cruises: list[dict] = []
+
+    # list to return to UI
+    list_cruises: list[dict] = []  # normally a subset of org_list_cruises
     list_cabins: list[dict] = []
+
+    # current objects are from user
     current_cruise_id: str | None = None
     current_cabin: str | None = None
 
