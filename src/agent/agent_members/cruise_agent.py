@@ -531,7 +531,7 @@ def sorting_cruise_list_nd_get_top_k(
             list_cruises, key=lambda x: x["duration"], reverse=order == "desc"
         )
 
-    _list_cruises = list_cruises[:5] # this one return to UI
+    _list_cruises = list_cruises[:top_k] # this one return to UI
     _prune_list_cruises = [
         {k: v for k, v in d.items() if k not in ["image", "mapUrl", "itinerary", "cabinUrl"]}
         for d in _list_cruises
